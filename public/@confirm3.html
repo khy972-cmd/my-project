@@ -1,0 +1,1900 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <title>작업완료확인서 - 최종 수정본</title> 
+
+  <!-- 확인서 전용 vendor는 public/vendor를 우선 사용하고, CDN은 마지막 fallback으로만 사용 -->
+  <!-- Pretendard CDN 제거: 시스템 폰트로 fallback -->
+  <!-- lucide/signature_pad/html2canvas/jsPDF는 하단 로더에서 ./vendor 경로로 로드 -->
+
+  <style>
+    /* =========================================
+       MODULE: CORE STYLES
+       ========================================= */
+    :root {
+        --font-main: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+        --bg-viewer: #1e1e1e; 
+        --bg-paper: #ffffff;
+        --border-color: #1e293b;
+        --primary-color: #2563eb;
+        
+        /* User Provided Colors */
+        --header-navy: #1a254f;
+        --primary: #31a3fa;
+        --primary-bg: #eaf6ff;
+        --info-col-label: 12%;
+        --info-col-label-2: 10%;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    body { 
+        margin: 0; padding: 0; 
+        font-family: var(--font-main); 
+        background: var(--bg-viewer); 
+        color: #fff;
+        height: 100vh; width: 100vw; overflow: hidden;
+        display: flex; flex-direction: column;
+        overscroll-behavior: none; 
+    }
+    
+    /* iframe 모드일 때 헤더 숨기기 */
+    body.iframe-mode .header-bar { display: none !important; }
+    body.iframe-mode .viewport { height: 100vh; padding-top: 0; }
+
+    /* =========================================
+       MODULE: HEADER
+       ========================================= */
+    .header-bar {
+        height: 60px; background: #000; 
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 16px; flex-shrink: 0; z-index: 100; border-bottom: 1px solid #333;
+    }
+    .header-title { font-size: 18px; font-weight: 700; color: #fff; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+
+    .icon-btn {
+        background: none; border: none; color: #fff; cursor: pointer;
+        padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.15); }
+    .icon-btn svg, .ctrl-btn svg, .mini-btn svg, .uu-btn svg, .toast svg {
+        width: 20px; height: 20px; flex-shrink: 0;
+    }
+    svg { vector-effect: non-scaling-stroke; }
+
+    /* =========================================
+       MODULE: VIEWER (Layout Fixed)
+       ========================================= */
+    .viewport {
+        flex: 1; position: relative; overflow: hidden;
+        background: var(--bg-viewer);
+        display: flex; 
+        justify-content: center; 
+        align-items: center;     
+        touch-action: pan-x pan-y; 
+        cursor: default;
+    }
+    .viewport.panning { cursor: grab !important; }
+    .viewport.panning:active { cursor: grabbing !important; }
+    
+    .paper-wrapper {
+        transform-origin: center center; 
+        transition: transform 0.05s linear; 
+        will-change: transform; 
+        padding: 0;
+        box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    }
+
+    .a4-paper {
+        width: 210mm; min-height: 297mm;
+        background: var(--bg-paper); color: #000;
+        padding: 15mm; 
+        display: flex; flex-direction: column;
+        justify-content: center; 
+    }
+
+    /* 문서 내부 스타일 */
+    .doc-header { text-align: center; margin-bottom: 30px; border-bottom: 3px double #000; padding-bottom: 15px; }
+    .doc-title { font-size: 36px; font-weight: 900; letter-spacing: 5px; color: #111; margin: 0; }
+
+    .info-table { width: 100%; border-collapse: collapse; border: 2px solid var(--border-color); margin-bottom: 20px; table-layout: fixed; }
+    .info-table th, .info-table td { border: 1px solid var(--border-color); padding: 8px; vertical-align: middle; }
+    .info-table th { background: #f8fafc; font-weight: 800; text-align: center; font-size: 16px; color: #334155; word-break: keep-all; }
+    .info-table col.info-col-label { width: var(--info-col-label); }
+    .info-table col.info-col-label-2 { width: var(--info-col-label-2); }
+    .info-table col.info-col-value { width: auto; }
+
+    /* Table 내부 입력창 스타일 (Textarea) */
+    .table-input {
+        width: 100%; border: none; background: transparent;
+        font-family: inherit; font-size: 16px; color: #000; outline: none;
+        padding: 2px; font-weight: 600; resize: none; overflow: hidden;
+        min-height: 24px; line-height: 1.4; vertical-align: middle;
+        display: block;
+    }
+    .table-input-singleline {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-wrap: nowrap;
+        padding-right: 8px;
+    }
+    .period-nowrap {
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        overflow-wrap: normal !important;
+    }
+
+    /* [중요] font-family inherit 추가: 시스템 폰트로 렌더링되어 높이가 달라지는 문제 방지 */
+    input, textarea { 
+        width: 100%; border: none; background: transparent; 
+        font-family: inherit; font-size: 16px; color: #000; outline: none; 
+        padding: 4px; font-weight: 600; resize: none;
+    }
+    input::placeholder, textarea::placeholder { color: #cbd5e1; font-weight: 400; }
+    input:focus, textarea:focus { background: rgba(37, 99, 235, 0.05); }
+
+    /* PDF 저장 모드 */
+    body.clean-mode input, body.clean-mode textarea { 
+        border: none !important; background: transparent !important; 
+        outline: none !important; box-shadow: none !important; 
+    }
+
+    .section-block { padding: 15px; display: flex; flex-direction: column; border: 2px solid var(--border-color); margin-bottom: 20px; }
+    .section-block.note { height: 150px; }
+    .sec-header { font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 12px; padding-left: 12px; border-left: 5px solid #475569; }
+
+    .footer-area { margin-top: 10px; text-align: center; }
+    .confirm-msg { font-size: 20px; font-weight: 800; margin-bottom: 25px; }
+    .date-input { font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 30px; }
+
+    /* [수정] 회사명 및 귀중 정렬 CSS - 윗부분 짤림 완벽 해결 */
+    .recipient-row {
+        margin-top: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end; /* 입력창의 밑변을 기준으로 정렬 */
+        gap: 8px;
+        font-weight: 700;
+        /* 행 전체 높이를 넉넉히 주어 레이아웃 확보 */
+        height: 80px; 
+    }
+    
+    .recipient-input {
+        text-align: center; 
+        font-size: 24px; 
+        font-weight: 800; 
+        width: 300px; 
+        border-bottom: 2px solid #000;
+        
+        /* [핵심 수정] 높이를 60px로 크게 늘리고, 상단 패딩을 주어 글자를 아래로 밀어냄 */
+        /* 이렇게 하면 글자 위에 15px 이상의 빈 공간이 생겨 절대 짤리지 않음 */
+        height: 60px;       
+        padding-top: 20px;  
+        padding-bottom: 0;  
+        box-sizing: border-box; /* 패딩이 높이에 포함되도록 설정 */
+        
+        line-height: 1.4;   
+        margin-bottom: 3px; /* 미세 위치 조정 */
+        background: transparent;
+        border-radius: 0;
+    }
+    
+    .recipient-suffix {
+        width: 60px; text-align: left; font-size: 20px; font-weight: 700;
+        border: none; background: transparent; cursor: text;
+        margin-bottom: 10px; /* 회사명 밑줄과 '귀중' 텍스트 높이 맞춤 */
+    }
+
+    /* =========================================
+       MODULE: SIGNATURE SYSTEM
+       ========================================= */
+    .sign-grid { 
+        display: grid; grid-template-columns: 33% 27% 40%; 
+        border: 2px solid var(--border-color); margin-bottom: 20px; 
+    }
+    .sign-cell-text { 
+        background: #f8fafc; border-right: 1px solid var(--border-color);
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        padding: 10px; gap: 8px;
+    }
+    .sign-label-text { font-weight: 800; font-size: 18px; color: #334155; }
+    .sign-input-text { text-align: center; font-size: 18px; font-weight: 700; width: 100%; border-bottom: 1px dashed #cbd5e1; }
+
+    .sign-cell-canvas { 
+        position: relative; background: #fff; height: 180px; 
+        display: flex; flex-direction: column; overflow: hidden; 
+        cursor: pointer;
+    }
+    .sign-cell-canvas:hover { background: #f0f9ff; }
+    
+    .sign-label-canvas {
+        padding: 8px 12px; font-weight: 700; font-size: 14px; color: #64748b;
+        border-bottom: 1px dashed #e2e8f0; pointer-events: none; text-align: left;
+    }
+    
+    .display-canvas-wrapper {
+        flex: 1; width: 100%; height: 100%; position: relative;
+        display: flex; align-items: center; justify-content: center;
+    }
+    #paperSignCanvas { width: 100%; height: 100%; pointer-events: none; display: block; }
+    
+    .click-guide {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        color: #94a3b8; font-weight: 700; font-size: 14px; pointer-events: none;
+        background: rgba(255,255,255,0.8); padding: 4px 8px; border-radius: 4px;
+    }
+
+    /* =========================================
+       MODULE: SIGNATURE MODAL
+       ========================================= */
+    .sign-modal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); z-index: 9999;
+        flex-direction: column; justify-content: center; align-items: center;
+        backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s;
+    }
+    .sign-modal.open { display: flex; opacity: 1; }
+
+    .modal-content {
+        width: 95%; max-width: 600px; height: 80vh; max-height: 800px;
+        background: #fff; border-radius: 12px; display: flex; flex-direction: column;
+        overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    
+    .modal-header {
+        padding: 12px 16px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-title { font-weight: 800; font-size: 16px; color: #1e293b; }
+    .close-btn { background: none; border: none; cursor: pointer; color: #64748b; }
+
+    .modal-body {
+        flex: 1; position: relative; background: #fff; overflow: hidden; touch-action: none;
+        background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+    
+    #modalCanvas { width: 100%; height: 100%; touch-action: none; display: block; }
+
+    .sign-tools-bar {
+        padding: 10px; background: #fff; border-top: 1px solid #e2e8f0;
+        display: flex; gap: 8px; overflow-x: auto; flex-shrink: 0;
+        align-items: center;
+    }
+    
+    .modal-footer {
+        padding: 12px 16px; background: #fff; border-top: 1px solid #e2e8f0;
+        display: flex; gap: 10px;
+    }
+    
+    .uu-btn {
+        flex: 1; height: 48px; border-radius: 10px; font-size: 15px; font-weight: 700; 
+        display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: 0.1s;
+        min-width: fit-content; padding: 0 16px;
+    }
+    .uu-btn.dashed.type-gray-secondary, .uu-btn.solid.type-gray-secondary {
+        background-color: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; border-style: solid !important;
+    }
+    .uu-btn.dashed.type-gray-secondary:hover, .uu-btn.solid.type-gray-secondary:hover { background-color: #e2e8f0; }
+    .uu-btn.dashed.type-blue, .uu-btn.solid.type-blue {
+        background-color: var(--header-navy); border: none; color: #ffffff; border-style: solid !important;
+    }
+
+    .mini-btn {
+        font-size: 12px; padding: 6px 12px; border: 1px solid #cbd5e1; 
+        background: #fff; border-radius: 6px; cursor: pointer; color: #475569; font-weight: 700;
+        display: flex; align-items: center; gap: 4px; white-space: nowrap;
+        height: 40px; justify-content: center;
+    }
+    .mini-btn.active { background: #eff6ff; color: #2563eb; border-color: #2563eb; }
+    
+    #modalEditLayer {
+        display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); z-index: 10;
+        flex-direction: column; justify-content: center; align-items: center;
+    }
+    #modalEditContainer {
+        position: relative; width: 100%; height: 100%; border: 2px dashed #31a3fa; overflow: hidden;
+    }
+    #modalEditingImage {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+        cursor: grab; touch-action: none; max-width: 100%; max-height: 100%; object-fit: contain;
+    }
+    .modal-edit-controls {
+        position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: #222; border-radius: 30px; padding: 10px 20px;
+        display: flex; gap: 15px; align-items: center; width: 90%; max-width: 400px;
+    }
+
+    /* =========================================
+       MODULE: CONTROLS
+       ========================================= */
+    .controls-pill {
+        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+        background: #222; padding: 10px 25px; border-radius: 50px;
+        display: flex; gap: 25px; z-index: 200; backdrop-filter: blur(8px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333;
+    }
+    .ctrl-btn {
+        background: none; border: none; color: #fff;
+        display: flex; flex-direction: column; align-items: center; gap: 4px;
+        font-size: 10px; cursor: pointer; min-width: 35px; opacity: 0.7; transition: 0.2s;
+    }
+    .ctrl-btn.active { color: #31a3fa; opacity: 1; font-weight: 700; }
+
+    .toast {
+        position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+        background: rgba(30, 41, 59, 0.95); color: #fff; padding: 12px 24px;
+        border-radius: 50px; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 99999;
+        display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px;
+    }
+    .toast.show { opacity: 1; top: 90px; }
+    
+    #signImageInput { display: none; }
+  </style>
+</head>
+<body>
+
+  <header class="header-bar">
+    <button class="icon-btn" id="btnBack"><i data-lucide="chevron-left" width="28"></i></button>
+    <div class="header-title">작업완료확인서</div>
+    <div class="header-right">
+        <button class="icon-btn" id="btnReset"><i data-lucide="rotate-ccw"></i></button>
+        <button class="icon-btn" id="btnDownload"><i data-lucide="download"></i></button>
+    </div>
+  </header>
+
+  <div class="viewport" id="viewport">
+    <div class="paper-wrapper" id="paperWrapper">
+      <div class="a4-paper" id="documentArea">
+        <header class="doc-header"><h1 class="doc-title">작 업 완 료 확 인 서</h1></header>
+
+        <table class="info-table">
+            <colgroup>
+                <col class="info-col-label">
+                <col class="info-col-value">
+                <col class="info-col-label info-col-label-2">
+                <col class="info-col-value">
+            </colgroup>
+            
+            <tr>
+                <th>현 장 명</th>
+                <td><textarea class="table-input" rows="1" placeholder="내용 입력">자이 아파트 101동</textarea></td>
+                <th>업 체</th>
+                <td><textarea class="table-input" rows="1" placeholder="업체명 입력"></textarea></td>
+            </tr>
+            <tr>
+                <th>공 사 명</th>
+                <td><textarea class="table-input" rows="1" placeholder="공사명 입력"></textarea></td>
+                <th class="period-nowrap">공사기간</th>
+                <td class="period-nowrap"><textarea class="table-input table-input-singleline period-nowrap" rows="1" wrap="off" placeholder="기간 입력"></textarea></td>
+            </tr>
+            </table>
+
+        <div class="section-block">
+            <div class="sec-header">작업내용</div>
+            <textarea style="flex:1; line-height:1.6;" placeholder="상세 내용">* 지하주차장 PC부재 균열보수 완료
+* </textarea>
+        </div>
+
+        <div class="section-block note">
+            <div class="sec-header">특기사항</div>
+            <textarea style="flex:1;" placeholder="특이사항"></textarea>
+        </div>
+
+        <div class="footer-area">
+            <div class="confirm-msg">상기 사항과 같이 작업을 완료하였음을 확인합니다.</div>
+            <input type="text" id="dateField" class="date-input" value="" style="cursor: pointer;" readonly onfocus="this.removeAttribute('readonly');" onblur="if(this.value.trim() === '') { const d = new Date(); this.value = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`; } this.setAttribute('readonly', 'readonly');">
+
+            <div class="sign-grid">
+                <div class="sign-cell-text">
+                    <span class="sign-label-text">소 속 :</span>
+                    <input type="text" class="sign-input-text" value="(주)이노피앤씨" placeholder="소속 입력">
+                </div>
+                <div class="sign-cell-text">
+                    <span class="sign-label-text">성 명 :</span>
+                    <input type="text" class="sign-input-text" placeholder="이름 입력">
+                </div>
+                
+                <div class="sign-cell-canvas" id="triggerSignModal">
+                    <div class="sign-label-canvas">확인자 (서명)</div>
+                    <div class="display-canvas-wrapper">
+                        <canvas id="paperSignCanvas"></canvas>
+                        <div class="click-guide" id="clickGuideText">서명하려면 터치</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="recipient-row">
+                <input type="text" class="recipient-input" placeholder="회사명"> 
+                <input type="text" class="recipient-suffix" value="귀중" placeholder="">
+            </div>
+        </div>
+      </div> 
+    </div>
+  </div>
+
+  <div class="controls-pill">
+    <button class="ctrl-btn" id="btnZoomOut"><i data-lucide="minus"></i>축소</button>
+    <button class="ctrl-btn" id="btnFit"><i data-lucide="scan"></i>맞춤</button>
+    <button class="ctrl-btn" id="btnPanToggle"><i data-lucide="hand"></i>이동</button>
+    <button class="ctrl-btn" id="btnZoomIn"><i data-lucide="plus"></i>확대</button>
+    <button class="ctrl-btn" id="btnShare"><i data-lucide="share-2"></i>공유</button>
+  </div>
+
+  <div class="toast" id="toast"><i data-lucide="check" size="18"></i> <span id="toastMsg">완료</span></div>
+
+  <div class="sign-modal" id="signModal">
+      <div class="modal-content">
+          <div class="modal-header">
+              <span class="modal-title">서명 또는 도장 입력</span>
+              <button class="close-btn" id="btnCloseModalX"><i data-lucide="x"></i></button>
+          </div>
+          <div class="modal-body">
+              <canvas id="modalCanvas"></canvas>
+              <div id="modalEditLayer">
+                  <div id="modalEditContainer">
+                      <img id="modalEditingImage" src="" alt="Stamp" draggable="false">
+                  </div>
+                  <div class="modal-edit-controls">
+                      <span style="color:#fff; font-size:12px; white-space:nowrap;">크기</span>
+                      <input type="range" id="modalScaleSlider" min="0.2" max="2.0" step="0.05" value="1" style="flex:1;">
+                      <button class="mini-btn" id="btnEditCancel">취소</button>
+                      <button class="mini-btn active" id="btnEditApply">적용</button>
+                  </div>
+              </div>
+          </div>
+          <div class="sign-tools-bar" id="signToolsBar">
+              <button class="mini-btn active" id="btnPen" style="margin-right:4px;"><i data-lucide="pen-tool" width="14"></i> 펜</button>
+              <button class="mini-btn" id="btnEraser" style="margin-right:10px;"><i data-lucide="eraser" width="14"></i> 지우개</button>
+              <button class="uu-btn dashed type-gray-secondary" id="btnImport" style="height:40px; font-size:13px; padding:0 12px; margin-right:4px;">
+                  <i data-lucide="image-plus" width="16"></i> 도장/사진
+              </button>
+              <button class="mini-btn" id="btnUndo"><i data-lucide="undo-2" width="14"></i></button>
+              <button class="mini-btn" id="btnClear"><i data-lucide="trash-2" width="14"></i></button>
+              <input type="file" id="signImageInput" accept="image/*">
+          </div>
+          <div class="modal-footer">
+              <button class="uu-btn dashed type-gray-secondary" id="btnCancelModal">취소</button>
+              <button class="uu-btn solid type-blue" id="btnConfirmModal">서명 완료</button>
+          </div>
+      </div>
+  </div>
+
+  <script>
+      const VENDOR_SCRIPTS = {
+          lucide: {
+              local: "./vendor/lucide.min.js",
+              cdn: "https://unpkg.com/lucide@0.462.0/dist/umd/lucide.js"
+          },
+          signaturePad: {
+              local: "./vendor/signature_pad.umd.min.js",
+              cdn: "https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"
+          },
+          html2canvas: {
+              local: "./vendor/html2canvas.min.js",
+              cdn: "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+          },
+          jspdf: {
+              local: "./vendor/jspdf.umd.min.js",
+              cdn: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+          }
+      };
+
+      const SCRIPT_LOAD_TIMEOUT_MS = 12000;
+      const loadScriptOnce = (src) => new Promise((resolve, reject) => {
+          const existing = document.querySelector(`script[src="${src}"]`);
+          if (existing) {
+              if (existing.dataset.loaded === "1") {
+                  resolve();
+                  return;
+              }
+              existing.addEventListener("load", () => {
+                  existing.dataset.loaded = "1";
+                  resolve();
+              }, { once: true });
+              existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), { once: true });
+              return;
+          }
+          const script = document.createElement("script");
+          script.src = src;
+          script.async = true;
+          script.onload = () => {
+              script.dataset.loaded = "1";
+              resolve();
+          };
+          script.onerror = () => reject(new Error(`Failed to load ${src}`));
+          document.head.appendChild(script);
+          window.setTimeout(() => reject(new Error(`Script load timeout: ${src}`)), SCRIPT_LOAD_TIMEOUT_MS);
+      });
+
+      const loadScriptWithFallback = async (localSrc, cdnSrc) => {
+          try {
+              await loadScriptOnce(localSrc);
+          } catch (e) {
+              if (!cdnSrc) throw e;
+              await loadScriptOnce(cdnSrc);
+          }
+      };
+
+      const ensureUiLibs = async () => {
+          const tasks = [];
+          if (!window.lucide) tasks.push(loadScriptWithFallback(VENDOR_SCRIPTS.lucide.local, VENDOR_SCRIPTS.lucide.cdn));
+          if (!window.SignaturePad) tasks.push(loadScriptWithFallback(VENDOR_SCRIPTS.signaturePad.local, VENDOR_SCRIPTS.signaturePad.cdn));
+          if (!tasks.length) return;
+          try {
+              await Promise.all(tasks);
+          } catch (e) {
+              console.warn("UI vendor libs load failed:", e);
+          }
+      };
+
+      const installLucideFallback = () => {
+          if (window.lucide && typeof window.lucide.createIcons === "function") return;
+          const iconMap = {
+              "chevron-left": '<polyline points="15 18 9 12 15 6"></polyline>',
+              "rotate-ccw": '<polyline points="1 4 1 10 7 10"></polyline><path d="M3.5 15a9 9 0 1 0 2-9.5"></path>',
+              "download": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>',
+              "minus": '<line x1="5" y1="12" x2="19" y2="12"></line>',
+              "scan": '<polyline points="3 8 3 3 8 3"></polyline><polyline points="16 3 21 3 21 8"></polyline><polyline points="21 16 21 21 16 21"></polyline><polyline points="8 21 3 21 3 16"></polyline>',
+              "hand": '<path d="M7 11V6a2 2 0 0 1 4 0v5"></path><path d="M11 11V4a2 2 0 1 1 4 0v7"></path><path d="M15 11V6a2 2 0 1 1 4 0v8"></path><path d="M7 11l-2 2a4 4 0 0 0 4 6h7a4 4 0 0 0 4-4v-4"></path>',
+              "plus": '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
+              "share-2": '<circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.7" y1="10.7" x2="15.3" y2="6.3"></line><line x1="8.7" y1="13.3" x2="15.3" y2="17.7"></line>',
+              "check": '<polyline points="20 6 9 17 4 12"></polyline>',
+              "x": '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>',
+              "pen-tool": '<path d="M12 19l7-7 3 3-7 7-3 1z"></path><path d="M16 5l3 3"></path>',
+              "eraser": '<path d="M3 17l6 6h10"></path><path d="M15 5l6 6-10 10H5L3 19l12-14z"></path>',
+              "image-plus": '<rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="M21 15l-5-5L5 21"></path><line x1="12" y1="7" x2="12" y2="13"></line><line x1="9" y1="10" x2="15" y2="10"></line>',
+              "undo-2": '<path d="M9 14 4 9l5-5"></path><path d="M20 20a8 8 0 0 0-8-8H4"></path>',
+              "trash-2": '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>'
+          };
+          window.lucide = {
+              createIcons: () => {
+                  document.querySelectorAll("i[data-lucide]").forEach((el) => {
+                      const name = el.getAttribute("data-lucide");
+                      const markup = iconMap[name];
+                      if (!markup) return;
+                      const size = el.getAttribute("size") || el.getAttribute("width") || "24";
+                      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                      svg.setAttribute("viewBox", "0 0 24 24");
+                      svg.setAttribute("width", size);
+                      svg.setAttribute("height", size);
+                      svg.setAttribute("fill", "none");
+                      svg.setAttribute("stroke", "currentColor");
+                      svg.setAttribute("stroke-width", "2");
+                      svg.setAttribute("stroke-linecap", "round");
+                      svg.setAttribute("stroke-linejoin", "round");
+                      svg.innerHTML = markup;
+                      el.replaceWith(svg);
+                  });
+              }
+          };
+      };
+
+      const installSignaturePadFallback = () => {
+          if (window.SignaturePad) return;
+          class SimpleSignaturePad {
+              constructor(canvas, options = {}) {
+                  this.canvas = canvas;
+                  this.ctx = canvas.getContext("2d");
+                  this.minWidth = options.minWidth || 1;
+                  this.maxWidth = options.maxWidth || 3;
+                  this.penColor = options.penColor || "#000";
+                  this.compositeOperation = "source-over";
+                  this._data = [];
+                  this._drawing = false;
+                  this._current = null;
+                  this._bind();
+              }
+              _bind() {
+                  this.canvas.addEventListener("pointerdown", (e) => this._start(e));
+                  this.canvas.addEventListener("pointermove", (e) => this._move(e));
+                  document.addEventListener("pointerup", () => this._end());
+                  document.addEventListener("pointercancel", () => this._end());
+              }
+              _point(e) {
+                  const rect = this.canvas.getBoundingClientRect();
+                  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+              }
+              _start(e) {
+                  e.preventDefault();
+                  this._drawing = true;
+                  this._current = [];
+                  this._data.push(this._current);
+                  this._addPoint(this._point(e));
+              }
+              _move(e) {
+                  if (!this._drawing) return;
+                  e.preventDefault();
+                  this._addPoint(this._point(e));
+              }
+              _end() {
+                  this._drawing = false;
+                  this._current = null;
+              }
+              _addPoint(p) {
+                  if (!this._current) return;
+                  this._current.push(p);
+                  const ctx = this.ctx;
+                  ctx.strokeStyle = this.penColor;
+                  ctx.lineWidth = this.maxWidth;
+                  ctx.lineCap = "round";
+                  ctx.lineJoin = "round";
+                  ctx.globalCompositeOperation = this.compositeOperation;
+                  const len = this._current.length;
+                  const prev = len > 1 ? this._current[len - 2] : p;
+                  ctx.beginPath();
+                  ctx.moveTo(prev.x, prev.y);
+                  ctx.lineTo(p.x, p.y);
+                  ctx.stroke();
+              }
+              clear() {
+                  this._data = [];
+                  this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+              }
+              isEmpty() {
+                  return this._data.length === 0;
+              }
+              toData() {
+                  return JSON.parse(JSON.stringify(this._data));
+              }
+              fromData(data) {
+                  this.clear();
+                  if (!Array.isArray(data)) return;
+                  this._data = data.map(stroke => Array.isArray(stroke) ? stroke.map(p => ({ x: p.x, y: p.y })) : []);
+                  this._redraw();
+              }
+              _redraw() {
+                  const ctx = this.ctx;
+                  ctx.strokeStyle = this.penColor;
+                  ctx.lineWidth = this.maxWidth;
+                  ctx.lineCap = "round";
+                  ctx.lineJoin = "round";
+                  ctx.globalCompositeOperation = this.compositeOperation;
+                  this._data.forEach(stroke => {
+                      for (let i = 1; i < stroke.length; i += 1) {
+                          const a = stroke[i - 1];
+                          const b = stroke[i];
+                          ctx.beginPath();
+                          ctx.moveTo(a.x, a.y);
+                          ctx.lineTo(b.x, b.y);
+                          ctx.stroke();
+                      }
+                  });
+              }
+          }
+          window.SignaturePad = SimpleSignaturePad;
+      };
+    /* UI 유틸리티 */
+    class UiUtils {
+        constructor() {
+            this.toastEl = document.getElementById('toast');
+            this.toastMsgEl = document.getElementById('toastMsg');
+            this.timer = null;
+        }
+        showToast(msg) {
+            this.toastMsgEl.innerText = msg;
+            this.toastEl.classList.add('show');
+            clearTimeout(this.timer);
+            this.timer = setTimeout(() => this.toastEl.classList.remove('show'), 2000);
+        }
+    }
+
+    /* 뷰어 매니저 */
+    class ViewerManager {
+        constructor(uiUtils) {
+            this.ui = uiUtils;
+            this.viewport = document.getElementById('viewport');
+            this.paperWrapper = document.getElementById('paperWrapper');
+            this.btnPan = document.getElementById('btnPanToggle');
+            this.zoomLevel = 1.0;
+            this.minZoom = 0.2;
+            this.maxZoom = 3.0;
+            this.isPanning = false; 
+            this.isPinching = false;
+            this.pinchStartDist = 0;
+            this.pinchStartZoom = 1;
+            this.startX = 0; this.startY = 0;
+            this.pointX = 0; this.pointY = 0;
+            this.bindEvents();
+        }
+        bindEvents() {
+            document.getElementById('btnZoomIn').addEventListener('click', () => this.adjustZoom(0.1));
+            document.getElementById('btnZoomOut').addEventListener('click', () => this.adjustZoom(-0.1));
+            document.getElementById('btnFit').addEventListener('click', () => this.fitToWidth());
+            this.btnPan.addEventListener('click', () => this.togglePan());
+            
+            const startPan = (e) => {
+                if(!this.isPanning) return;
+                if (this.isPinching) return;
+                if(['INPUT','TEXTAREA','BUTTON'].includes(e.target.tagName)) return;
+                if (e.target.id === 'paperSignCanvas' || (e.target.closest && e.target.closest('.sign-cell-canvas'))) return;
+                if (e.touches && e.touches.length > 1) return;
+                
+                e.preventDefault();
+                const cx = e.touches ? e.touches[0].clientX : e.clientX;
+                const cy = e.touches ? e.touches[0].clientY : e.clientY;
+                this.startX = cx - this.pointX;
+                this.startY = cy - this.pointY;
+
+                const moveHandler = (ev) => {
+                    ev.preventDefault();
+                    const mx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                    const my = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                    this.pointX = mx - this.startX;
+                    this.pointY = my - this.startY;
+                    this.updateTransform();
+                };
+                const upHandler = () => {
+                    document.removeEventListener('mousemove', moveHandler);
+                    document.removeEventListener('mouseup', upHandler);
+                    document.removeEventListener('touchmove', moveHandler);
+                    document.removeEventListener('touchend', upHandler);
+                };
+                document.addEventListener('mousemove', moveHandler);
+                document.addEventListener('mouseup', upHandler);
+                document.addEventListener('touchmove', moveHandler, {passive: false});
+                document.addEventListener('touchend', upHandler);
+            };
+
+            this.viewport.addEventListener('mousedown', startPan);
+            this.viewport.addEventListener('touchstart', startPan, {passive:false});
+
+              this.viewport.addEventListener('wheel', (e) => {
+                  if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+                  e.preventDefault();
+                  const factor = e.deltaY > 0 ? 0.9 : 1.1;
+                  this.setZoom(this.zoomLevel * factor, e.clientX, e.clientY);
+              }, { passive: false });
+
+            this.viewport.addEventListener('touchstart', (e) => {
+                if (e.touches.length !== 2) return;
+                e.preventDefault();
+                const [t1, t2] = [e.touches[0], e.touches[1]];
+                const dx = t2.clientX - t1.clientX;
+                const dy = t2.clientY - t1.clientY;
+                this.isPinching = true;
+                this.pinchStartDist = Math.hypot(dx, dy);
+                this.pinchStartZoom = this.zoomLevel;
+            }, { passive: false });
+
+            this.viewport.addEventListener('touchmove', (e) => {
+                if (!this.isPinching || e.touches.length !== 2) return;
+                e.preventDefault();
+                const [t1, t2] = [e.touches[0], e.touches[1]];
+                const dx = t2.clientX - t1.clientX;
+                const dy = t2.clientY - t1.clientY;
+                const dist = Math.hypot(dx, dy);
+                const next = this.pinchStartZoom * (dist / Math.max(1, this.pinchStartDist));
+                const cx = (t1.clientX + t2.clientX) / 2;
+                const cy = (t1.clientY + t2.clientY) / 2;
+                this.setZoom(next, cx, cy);
+            }, { passive: false });
+
+            this.viewport.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) this.isPinching = false;
+            }, { passive: false });
+
+              window.addEventListener('resize', () => {
+                  clearTimeout(this.resizeTimer);
+                  this.resizeTimer = setTimeout(() => this.fitToWidth(), 200);
+              });
+              // Run initial fit once to avoid visible double-fit on open.
+              if (document.fonts && document.fonts.ready) {
+                  document.fonts.ready.then(() => this.fitToWidth()).catch(() => this.fitToWidth());
+              } else {
+                  setTimeout(() => this.fitToWidth(), 100);
+              }
+          }
+        setZoom(next, cx, cy) {
+            const clamped = Math.max(this.minZoom, Math.min(this.maxZoom, next));
+            const prev = this.zoomLevel || 1;
+            if (typeof cx === "number" && typeof cy === "number") {
+                const rect = this.viewport.getBoundingClientRect();
+                const dx = cx - rect.left - rect.width / 2;
+                const dy = cy - rect.top - rect.height / 2;
+                const ratio = clamped / prev;
+                this.pointX = this.pointX * ratio + dx * (1 - ratio);
+                this.pointY = this.pointY * ratio + dy * (1 - ratio);
+            }
+            this.zoomLevel = clamped;
+            this.updateTransform();
+        }
+          fitToWidth() {
+              const viewportW = this.viewport.clientWidth;
+              const contentEl = this.paperWrapper.querySelector('.a4-paper');
+              const baseW = contentEl ? contentEl.getBoundingClientRect().width / (this.zoomLevel || 1) : 854;
+              const contentW = Math.max(baseW, 1);
+              let scale = viewportW / contentW;
+              if(scale > 1.1) scale = 1.0; 
+              this.zoomLevel = Math.max(this.minZoom, Math.min(this.maxZoom, scale));
+              this.pointX = 0;
+            this.pointY = 0;
+            this.updateTransform();
+        }
+        adjustZoom(delta) {
+            this.setZoom(this.zoomLevel + delta);
+        }
+        togglePan() {
+            this.isPanning = !this.isPanning;
+            this.btnPan.classList.toggle('active', this.isPanning);
+            this.viewport.classList.toggle('panning', this.isPanning);
+            this.ui.showToast(this.isPanning ? "이동 모드" : "입력 모드");
+        }
+        updateTransform() {
+            this.paperWrapper.style.transform = `translate(${this.pointX}px, ${this.pointY}px) scale(${this.zoomLevel})`;
+        }
+    }
+
+    /* 서명 매니저 */
+    class SignatureManager {
+        constructor(uiUtils, viewerManager) {
+            this.ui = uiUtils;
+            this.viewer = viewerManager; 
+            
+            this.triggerBtn = document.getElementById('triggerSignModal');
+            this.paperCanvas = document.getElementById('paperSignCanvas');
+            this.guideText = document.getElementById('clickGuideText');
+            
+            this.modal = document.getElementById('signModal');
+            this.modalCanvas = document.getElementById('modalCanvas');
+            this.fileInput = document.getElementById('signImageInput');
+            
+            this.editLayer = document.getElementById('modalEditLayer');
+            this.editImg = document.getElementById('modalEditingImage');
+            this.editContainer = document.getElementById('modalEditContainer');
+            this.scaleSlider = document.getElementById('modalScaleSlider');
+            
+            this.backgroundImages = []; 
+            this.pad = null;
+            this.isOpen = false;
+            this.onPaperChange = null;
+            
+            this.imgBase = { w: 0, h: 0 };
+            this.imgState = { x: 0, y: 0, scale: 1 };
+            this.isDraggingImg = false;
+            this.dragStart = { x: 0, y: 0 };
+
+            this.paperSignature = null; 
+            this.paperDrag = { isDragging: false, startX: 0, startY: 0, baseX: 0, baseY: 0 };
+
+            this.init();
+        }
+
+          init() {
+              this.pad = new SignaturePad(this.modalCanvas, {
+                  minWidth: 1.0, maxWidth: 3.0, penColor: '#000', throttle: 8
+              });
+
+            this.triggerBtn.addEventListener('click', () => this.openModal());
+            document.getElementById('btnCloseModalX').addEventListener('click', () => this.closeModal());
+            document.getElementById('btnCancelModal').addEventListener('click', () => this.closeModal());
+            document.getElementById('btnConfirmModal').addEventListener('click', () => this.applySignature());
+
+            document.getElementById('btnPen').addEventListener('click', (e) => this.setTool('pen', e.target));
+            document.getElementById('btnEraser').addEventListener('click', (e) => this.setTool('eraser', e.target));
+            document.getElementById('btnUndo').addEventListener('click', () => this.undo());
+            document.getElementById('btnClear').addEventListener('click', () => this.clearAll());
+            
+            document.getElementById('btnImport').addEventListener('click', () => this.fileInput.click());
+            this.fileInput.addEventListener('change', (e) => this.handleFile(e));
+
+            document.getElementById('btnEditCancel').addEventListener('click', () => this.closeEditor());
+            document.getElementById('btnEditApply').addEventListener('click', () => this.applyEditorImage());
+            
+            this.scaleSlider.addEventListener('input', (e) => {
+                const next = parseFloat(e.target.value);
+                this.imgState.scale = Number.isFinite(next) ? next : 1;
+                this.updateImgTransform();
+            });
+            
+            this.editImg.addEventListener('mousedown', (e) => this.startDrag(e));
+            this.editImg.addEventListener('touchstart', (e) => this.startDrag(e), {passive:false});
+            
+            if (window.ResizeObserver && this.paperCanvas && this.paperCanvas.parentElement) {
+                this.paperResizeObserver = new ResizeObserver(() => this.resizePaperCanvas());
+                this.paperResizeObserver.observe(this.paperCanvas.parentElement);
+            } else {
+                window.addEventListener('resize', () => this.resizePaperCanvas());
+            }
+
+            this.paperCanvas.addEventListener('mousedown', (e) => this.startPaperDrag(e));
+            this.paperCanvas.addEventListener('touchstart', (e) => this.startPaperDrag(e), { passive: false });
+        }
+
+        openModal() {
+            this.isOpen = true;
+            this.modal.classList.add('open');
+            setTimeout(() => { this.resizeModalCanvas(); }, 100);
+        }
+
+        closeModal() {
+            this.isOpen = false;
+            this.modal.classList.remove('open');
+            this.closeEditor();
+        }
+
+        resizeModalCanvas() {
+            const container = this.modalCanvas.parentElement;
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            
+            if (this.modalCanvas.width !== w * ratio) {
+                const data = this.pad.toData(); 
+                this.modalCanvas.width = w * ratio;
+                this.modalCanvas.height = h * ratio;
+                this.modalCanvas.getContext('2d').scale(ratio, ratio);
+                this.pad.clear();
+                this.redrawBackgrounds(); 
+                this.pad.fromData(data); 
+            }
+        }
+        
+        setTool(type, btn) {
+            const allBtns = document.querySelectorAll('.sign-tools-bar button');
+            allBtns.forEach(b => b.classList.remove('active'));
+            (btn.closest('button') || btn).classList.add('active');
+            
+            if(type === 'eraser') {
+                this.pad.compositeOperation = 'destination-out';
+                this.pad.minWidth = 10; this.pad.maxWidth = 20;
+            } else {
+                this.pad.compositeOperation = 'source-over';
+                this.pad.minWidth = 1; this.pad.maxWidth = 3;
+            }
+        }
+
+        undo() {
+            const data = this.pad.toData();
+            if (data && data.length > 0) {
+                data.pop();
+                this.pad.fromData(data);
+            } else if (this.backgroundImages.length > 0) {
+                this.backgroundImages.pop();
+                this.resizeModalCanvas(); 
+                this.ui.showToast("이미지 삭제됨");
+            }
+        }
+
+        clearAll() {
+            if(confirm("모두 지우시겠습니까?")) {
+                this.pad.clear();
+                this.backgroundImages = [];
+                this.resizeModalCanvas();
+            }
+        }
+
+        handleFile(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    const processedUrl = this.processImage(img);
+                    this.openEditor(processedUrl);
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        }
+
+        processImage(img) {
+            const c = document.createElement('canvas');
+            const w = img.width, h = img.height;
+            const max = 800;
+            let scale = 1;
+            if(w > max || h > max) scale = max / Math.max(w,h);
+            c.width = w * scale; c.height = h * scale;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            const idata = ctx.getImageData(0,0,c.width,c.height);
+            const data = idata.data;
+            for(let i=0; i<data.length; i+=4) {
+                const avg = (data[i]+data[i+1]+data[i+2])/3;
+                if(avg > 200) data[i+3] = 0; 
+                else { data[i] = data[i+1] = data[i+2] = 0; }
+            }
+            ctx.putImageData(idata, 0,0);
+            return c.toDataURL();
+        }
+
+        openEditor(src) {
+            this.editLayer.style.display = 'flex';
+            this.editImg.onload = () => {
+                const rect = this.editContainer.getBoundingClientRect();
+                const iw = this.editImg.naturalWidth || this.editImg.width || rect.width;
+                const ih = this.editImg.naturalHeight || this.editImg.height || rect.height;
+                const fit = Math.min(rect.width / Math.max(1, iw), rect.height / Math.max(1, ih));
+                this.imgBase = { w: Math.max(1, iw * fit), h: Math.max(1, ih * fit) };
+                this.imgState = { x: 0, y: 0, scale: 1 };
+                this.scaleSlider.value = "1";
+                this.updateImgTransform();
+            };
+            this.editImg.src = src;
+        }
+        
+        closeEditor() { this.editLayer.style.display = 'none'; }
+
+        updateImgTransform() {
+            const clamped = Math.max(0.2, Math.min(2.0, this.imgState.scale));
+            this.imgState.scale = clamped;
+            this.scaleSlider.value = String(clamped);
+            if (this.imgBase && this.imgBase.w) {
+                this.editImg.style.width = `${this.imgBase.w}px`;
+                this.editImg.style.height = `${this.imgBase.h}px`;
+            }
+            this.editImg.style.transform = `translate(-50%, -50%) translate(${this.imgState.x}px, ${this.imgState.y}px) scale(${clamped})`;
+        }
+
+        startDrag(e) {
+            e.preventDefault();
+            this.isDraggingImg = true;
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            this.dragStart = { x: cx - this.imgState.x, y: cy - this.imgState.y };
+            
+            const move = (ev) => {
+                if(!this.isDraggingImg) return;
+                ev.preventDefault();
+                const mx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                const my = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                this.imgState.x = mx - this.dragStart.x;
+                this.imgState.y = my - this.dragStart.y;
+                this.updateImgTransform();
+            };
+            const end = () => {
+                this.isDraggingImg = false;
+                document.removeEventListener('mousemove', move);
+                document.removeEventListener('mouseup', end);
+                document.removeEventListener('touchmove', move);
+                document.removeEventListener('touchend', end);
+            };
+            document.addEventListener('mousemove', move);
+            document.addEventListener('mouseup', end);
+            document.addEventListener('touchmove', move, {passive:false});
+            document.addEventListener('touchend', end);
+        }
+
+        applyEditorImage() {
+            const containerRect = this.editContainer.getBoundingClientRect();
+            const baseW = (this.imgBase && this.imgBase.w) ? this.imgBase.w : this.editImg.getBoundingClientRect().width;
+            const baseH = (this.imgBase && this.imgBase.h) ? this.imgBase.h : this.editImg.getBoundingClientRect().height;
+            const displayW = baseW * this.imgState.scale;
+            const displayH = baseH * this.imgState.scale;
+            const contCenterX = containerRect.width / 2;
+            const contCenterY = containerRect.height / 2;
+            const imgCenterX = contCenterX + this.imgState.x;
+            const imgCenterY = contCenterY + this.imgState.y;
+            const w = displayW;
+            const h = displayH;
+            let x = imgCenterX - displayW / 2;
+            let y = imgCenterY - displayH / 2;
+            const maxX = Math.max(0, containerRect.width - w);
+            const maxY = Math.max(0, containerRect.height - h);
+            x = Math.min(Math.max(0, x), maxX);
+            y = Math.min(Math.max(0, y), maxY);
+            
+            const imgObj = new Image();
+            imgObj.onload = () => {
+                this.backgroundImages.push({ img: imgObj, x, y, w, h });
+                this.redrawBackgrounds();
+                this.closeEditor();
+            };
+            imgObj.src = this.editImg.src; 
+        }
+
+        redrawBackgrounds() {
+            const ctx = this.modalCanvas.getContext('2d');
+            const prevComp = ctx.globalCompositeOperation;
+            ctx.globalCompositeOperation = 'destination-over'; 
+            this.backgroundImages.forEach(item => {
+                ctx.drawImage(item.img, item.x, item.y, item.w, item.h);
+            });
+            ctx.globalCompositeOperation = prevComp;
+        }
+
+        resizePaperCanvas() {
+            const w = this.paperCanvas.parentElement.clientWidth;
+            const h = this.paperCanvas.parentElement.clientHeight;
+            if(!w || !h) return;
+            const ratio = 2; 
+            this.paperCanvas.width = w * ratio;
+            this.paperCanvas.height = h * ratio;
+            if (this.paperSignature) { this.renderPaperSignature(); }
+        }
+
+        applySignature() {
+            if (this.pad.isEmpty() && this.backgroundImages.length === 0) {
+                this.ui.showToast("서명 내용이 없습니다.");
+                return;
+            }
+
+            const dataURL = this.modalCanvas.toDataURL("image/png");
+            
+            const img = new Image();
+            img.onload = () => {
+                const ctx = this.paperCanvas.getContext('2d');
+                const pw = this.paperCanvas.width;
+                const ph = this.paperCanvas.height;
+                const iw = img.width;
+                const ih = img.height;
+
+                const canvasRatio = pw / ph;
+                const imgRatio = iw / ih;
+
+                let drawW, drawH, offsetX, offsetY;
+                const marginScale = 0.9; 
+
+                if (imgRatio > canvasRatio) {
+                    drawW = pw * marginScale;
+                    drawH = drawW / imgRatio;
+                } else {
+                    drawH = ph * marginScale;
+                    drawW = drawH * imgRatio;
+                }
+
+                offsetX = (pw - drawW) / 2;
+                offsetY = (ph - drawH) / 2;
+
+                  this.paperSignature = { img, w: drawW, h: drawH, x: offsetX, y: offsetY, src: dataURL };
+                  this.renderPaperSignature();
+                  
+                  this.guideText.style.display = 'none';
+                  this.emitPaperChange();
+                  this.closeModal();
+                  this.ui.showToast("서명이 적용되었습니다");
+              };
+              img.src = dataURL;
+          }
+        
+        clearPaper() {
+              const ctx = this.paperCanvas.getContext('2d');
+              ctx.clearRect(0, 0, this.paperCanvas.width, this.paperCanvas.height);
+              this.guideText.style.display = 'block';
+              this.clearAll(); 
+              this.paperSignature = null;
+              this.emitPaperChange();
+          }
+
+          renderPaperSignature() {
+              const ctx = this.paperCanvas.getContext('2d');
+              ctx.clearRect(0, 0, this.paperCanvas.width, this.paperCanvas.height);
+              if (!this.paperSignature) return;
+              const s = this.paperSignature;
+              ctx.drawImage(s.img, s.x, s.y, s.w, s.h);
+          }
+
+          getPaperState() {
+              if (!this.paperSignature || !this.paperSignature.img) return null;
+              return {
+                  src: this.paperSignature.src || this.paperSignature.img.src,
+                  x: this.paperSignature.x,
+                  y: this.paperSignature.y,
+                  w: this.paperSignature.w,
+                  h: this.paperSignature.h
+              };
+          }
+
+          setPaperState(state) {
+              if (!state || !state.src) return;
+              const img = new Image();
+              img.onload = () => {
+                  this.paperSignature = {
+                      img,
+                      x: typeof state.x === "number" ? state.x : 0,
+                      y: typeof state.y === "number" ? state.y : 0,
+                      w: typeof state.w === "number" ? state.w : img.width,
+                      h: typeof state.h === "number" ? state.h : img.height,
+                      src: state.src
+                  };
+                  this.renderPaperSignature();
+                  this.guideText.style.display = 'none';
+              };
+              img.src = state.src;
+          }
+
+          emitPaperChange() {
+              if (typeof this.onPaperChange === "function") {
+                  this.onPaperChange(this.getPaperState());
+              }
+          }
+
+        startPaperDrag(e) {
+            if (!this.paperSignature) return; 
+            if (!this.viewer || !this.viewer.isPanning) return; 
+            e.preventDefault();
+
+            const rect = this.paperCanvas.getBoundingClientRect();
+            const isTouch = !!e.touches;
+            const cx = isTouch ? e.touches[0].clientX : e.clientX;
+            const cy = isTouch ? e.touches[0].clientY : e.clientY;
+
+            this.paperDrag.isDragging = true;
+            this.paperDrag.startX = cx;
+            this.paperDrag.startY = cy;
+            this.paperDrag.baseX = this.paperSignature.x;
+            this.paperDrag.baseY = this.paperSignature.y;
+
+            const move = (ev) => {
+                if (!this.paperDrag.isDragging) return;
+                ev.preventDefault();
+                const mx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                const my = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                const ratioX = this.paperCanvas.width / rect.width;
+                const ratioY = this.paperCanvas.height / rect.height;
+                const dx = (mx - this.paperDrag.startX) * ratioX;
+                const dy = (my - this.paperDrag.startY) * ratioY;
+                this.paperSignature.x = this.paperDrag.baseX + dx;
+                this.paperSignature.y = this.paperDrag.baseY + dy;
+                this.renderPaperSignature();
+            };
+              const end = () => {
+                  this.paperDrag.isDragging = false;
+                  document.removeEventListener('mousemove', move);
+                  document.removeEventListener('mouseup', end);
+                  document.removeEventListener('touchmove', move);
+                  document.removeEventListener('touchend', end);
+                  this.emitPaperChange();
+              };
+            document.addEventListener('mousemove', move);
+            document.addEventListener('mouseup', end);
+            document.addEventListener('touchmove', move, { passive: false });
+            document.addEventListener('touchend', end);
+        }
+    }
+
+    /* 내보내기 (PDF/공유) */
+    class Exporter {
+        constructor(uiUtils) {
+            this.ui = uiUtils;
+            this.paperWrapper = document.getElementById('paperWrapper');
+            this.documentArea = document.getElementById('documentArea');
+            document.getElementById('btnDownload').addEventListener('click', () => this.savePDF());
+            document.getElementById('btnShare').addEventListener('click', () => this.shareContent());
+        }
+
+        // ✅ [추가] html2canvas가 input 텍스트를 위에서 자르는 문제를 피하기 위해
+        // 캡처용 clone DOM에서만 recipient 입력을 div로 치환 (레이아웃은 동일)
+        _fixRecipientForCapture(clonedDoc) {
+            try {
+                const docArea = clonedDoc.getElementById('documentArea');
+                if (!docArea) return;
+
+                const row = docArea.querySelector('.recipient-row');
+                if (!row) return;
+
+                const companyInput = row.querySelector('input.recipient-input');
+                const suffixInput  = row.querySelector('input.recipient-suffix');
+
+                const replaceWithDiv = (inputEl, cssText, fallbackText = "") => {
+                    if (!inputEl || !inputEl.parentNode) return;
+                    const div = clonedDoc.createElement('div');
+                    const val = (inputEl.value || "").trim();
+                    div.textContent = val || fallbackText; // placeholder는 prepareCapture에서 이미 제거됨
+                    div.setAttribute('style', cssText);
+                    inputEl.parentNode.replaceChild(div, inputEl);
+                };
+
+                // 회사명 칸 (밑줄 포함, 높이/폭 동일 + line-height로 수직중앙 → 상단 잘림 방지)
+                if (companyInput) {
+                    replaceWithDiv(
+                        companyInput,
+                        [
+                          "text-align:center",
+                          "font-size:24px",
+                          "font-weight:800",
+                          "width:300px",
+                          "height:60px",
+                          "line-height:60px",
+                          "box-sizing:border-box",
+                          "border-bottom:2px solid #000",
+                          "background:transparent",
+                          "border-radius:0",
+                          "padding:0",
+                          "margin-bottom:3px",
+                          "color:#000",
+                          "font-family:inherit"
+                        ].join(";"),
+                        "" // 빈 값이면 그냥 공란
+                    );
+                }
+
+                // 귀중 칸
+                if (suffixInput) {
+                    replaceWithDiv(
+                        suffixInput,
+                        [
+                          "width:60px",
+                          "text-align:left",
+                          "font-size:20px",
+                          "font-weight:700",
+                          "height:auto",
+                          "line-height:1.4",
+                          "box-sizing:border-box",
+                          "border:none",
+                          "background:transparent",
+                          "padding:0",
+                          "margin-bottom:10px",
+                          "color:#000",
+                          "font-family:inherit"
+                        ].join(";"),
+                        "귀중"
+                    );
+                }
+            } catch (e) {
+                // 캡처는 계속 진행
+                console.warn("Recipient capture fix skipped:", e);
+            }
+        }
+
+        _fixTableForCapture(clonedDoc) {
+            try {
+                const tables = clonedDoc.querySelectorAll('table');
+                tables.forEach((table) => {
+                    table.style.tableLayout = 'fixed';
+                    table.style.width = '100%';
+                    table.style.borderCollapse = 'collapse';
+                });
+                clonedDoc.querySelectorAll('td, th').forEach((node) => {
+                    const el = node;
+                    el.style.verticalAlign = 'middle';
+                    el.style.lineHeight = '1.4';
+                    el.style.paddingTop = '6px';
+                    el.style.paddingBottom = '10px';
+                    el.style.paddingLeft = '4px';
+                    el.style.paddingRight = '4px';
+                    el.style.whiteSpace = 'normal';
+                    el.style.wordBreak = 'break-word';
+                    el.style.overflowWrap = 'anywhere';
+                    el.style.boxSizing = 'border-box';
+                });
+                const singleLineInputs = clonedDoc.querySelectorAll('.table-input-singleline');
+                singleLineInputs.forEach((node) => {
+                    const el = node;
+                    el.style.whiteSpace = 'nowrap';
+                    el.style.wordBreak = 'keep-all';
+                    el.style.overflowWrap = 'normal';
+                    el.style.overflow = 'hidden';
+                    el.style.paddingRight = '8px';
+                });
+                const periodCells = clonedDoc.querySelectorAll('.period-nowrap');
+                periodCells.forEach((node) => {
+                    const el = node;
+                    el.style.whiteSpace = 'nowrap';
+                    el.style.wordBreak = 'keep-all';
+                    el.style.overflowWrap = 'normal';
+                });
+            } catch (e) {
+                console.warn("Table capture fix skipped:", e);
+            }
+        }
+
+          _loadScript(src) {
+              if (typeof src === "string") {
+                  return loadScriptOnce(src);
+              }
+              const localSrc = src && src.local;
+              const cdnSrc = src && src.cdn;
+              if (!localSrc && !cdnSrc) {
+                  return Promise.reject(new Error("Missing script source"));
+              }
+              return loadScriptWithFallback(localSrc || cdnSrc, cdnSrc);
+          }
+
+          async _waitForImages(root) {
+              try {
+                  const imgs = Array.from(root.querySelectorAll('img'));
+                  if (!imgs.length) return;
+                  await Promise.all(imgs.map(img => {
+                      if (img.decode) {
+                          return img.decode().catch(() => {});
+                      }
+                      if (img.complete) return Promise.resolve();
+                      return new Promise((resolve) => {
+                          img.addEventListener('load', () => resolve(), { once: true });
+                          img.addEventListener('error', () => resolve(), { once: true });
+                      });
+                  }));
+              } catch (e) {
+                  console.warn("Image wait skipped:", e);
+              }
+          }
+
+          async ensurePdfLibs() {
+              try {
+                  if (!window.html2canvas) {
+                      await this._loadScript(VENDOR_SCRIPTS.html2canvas);
+                  }
+                  if (!window.jspdf) {
+                      await this._loadScript(VENDOR_SCRIPTS.jspdf);
+                  }
+              } catch (e) {
+                  console.warn("PDF vendor libs load failed:", e);
+                  throw e;
+              }
+          }
+
+        async prepareCapture() {
+            const originalTransform = this.paperWrapper.style.transform;
+            const originalMargin = this.paperWrapper.style.margin;
+            
+            const inputs = document.querySelectorAll('input, textarea');
+            const placeholders = [];
+            inputs.forEach(el => {
+                placeholders.push({el, val: el.placeholder});
+                el.placeholder = "";
+            });
+            
+            const guideText = document.getElementById('clickGuideText');
+            const guideTextDisplay = guideText ? guideText.style.display : null;
+            if (guideText) { guideText.style.display = 'none'; }
+
+            this.paperWrapper.style.transform = 'scale(1)';
+            this.paperWrapper.style.margin = '0';
+            document.body.classList.add('clean-mode');
+            
+            await new Promise(r => setTimeout(r, 100));
+
+            return () => {
+                this.paperWrapper.style.transform = originalTransform;
+                this.paperWrapper.style.margin = originalMargin;
+                document.body.classList.remove('clean-mode');
+                placeholders.forEach(item => item.el.placeholder = item.val);
+                if (guideText) { guideText.style.display = guideTextDisplay || ''; }
+            };
+        }
+
+          async savePDF() {
+              this.ui.showToast("PDF 생성 중...");
+              try {
+                  await this.ensurePdfLibs();
+              } catch {
+                  this.ui.showToast("PDF 라이브러리 로드 실패");
+                  return;
+              }
+              const html2canvas = window.html2canvas;
+              const jsPDF = window.jspdf && window.jspdf.jsPDF;
+              if (!html2canvas || !jsPDF) {
+                  this.ui.showToast("PDF 라이브러리 로드 실패");
+                  return;
+              }
+              const restore = await this.prepareCapture();
+              try {
+                  if (document.fonts && document.fonts.ready) {
+                      await document.fonts.ready;
+                  }
+                  await this._waitForImages(this.documentArea);
+                  const canvas = await html2canvas(this.documentArea, {
+                      scale: 2, useCORS: true, backgroundColor: "#ffffff",
+                      // ✅ [추가] clone DOM에서만 input → div 치환
+                      onclone: (clonedDoc) => {
+                          if (clonedDoc.body) {
+                              clonedDoc.body.style.fontFamily = "Arial, sans-serif";
+                          }
+                          this._fixRecipientForCapture(clonedDoc);
+                          this._fixTableForCapture(clonedDoc);
+                      }
+                  });
+                  if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                      this.ui.showToast("이미지 생성 실패");
+                      return;
+                  }
+
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pW = pdf.internal.pageSize.getWidth();
+                const pH = pdf.internal.pageSize.getHeight();
+                const mmPerPx = pW / canvas.width;
+                const pageHeightPx = Math.floor(pH / mmPerPx);
+
+                let y = 0;
+                let page = 0;
+                while (y < canvas.height - 1) {
+                    if (page > 0) pdf.addPage();
+                    const sliceH = Math.min(pageHeightPx, canvas.height - y);
+                    const sliceCanvas = document.createElement('canvas');
+                    sliceCanvas.width = canvas.width;
+                    sliceCanvas.height = sliceH;
+                    const ctx = sliceCanvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+                    }
+                    pdf.addImage(
+                        sliceCanvas.toDataURL('image/jpeg', 0.95),
+                        'JPEG',
+                        0,
+                        0,
+                        pW,
+                        sliceH * mmPerPx
+                    );
+                    y += sliceH;
+                    page += 1;
+                }
+                
+                pdf.save(`작업완료확인서_${this.getDateStr()}.pdf`);
+                this.ui.showToast("저장되었습니다!");
+                window.dispatchEvent(new CustomEvent('confirm:downloaded', {
+                    detail: { filename: `작업완료확인서_${this.getDateStr()}.pdf` }
+                }));
+            } catch(e) {
+                console.error(e);
+                this.ui.showToast("저장 실패");
+            } finally {
+                restore();
+            }
+        }
+
+          async shareContent() {
+              if(!navigator.share) { alert("공유 기능을 지원하지 않는 브라우저입니다."); return; }
+              this.ui.showToast("이미지 생성 중...");
+              try {
+                  await this.ensurePdfLibs();
+              } catch {
+                  this.ui.showToast("라이브러리 로드 실패");
+                  return;
+              }
+              const html2canvas = window.html2canvas;
+              if (!html2canvas) {
+                  this.ui.showToast("라이브러리 로드 실패");
+                  return;
+              }
+              const restore = await this.prepareCapture();
+              try {
+                  if (document.fonts && document.fonts.ready) {
+                      await document.fonts.ready;
+                  }
+                  await this._waitForImages(this.documentArea);
+                  const canvas = await html2canvas(this.documentArea, { 
+                      scale: 2, useCORS: true,
+                      // ✅ [추가] 공유 캡처도 동일 적용
+                      onclone: (clonedDoc) => {
+                          if (clonedDoc.body) {
+                              clonedDoc.body.style.fontFamily = "Arial, sans-serif";
+                          }
+                          this._fixRecipientForCapture(clonedDoc);
+                          this._fixTableForCapture(clonedDoc);
+                      }
+                  });
+                  if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                      this.ui.showToast("이미지 생성 실패");
+                      return;
+                  }
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], "confirmation.jpg", { type: "image/jpeg" });
+                    await navigator.share({ title: '작업확인서', files: [file] });
+                }, 'image/jpeg', 0.9);
+            } catch(e) {
+                this.ui.showToast("공유 실패");
+            } finally {
+                restore();
+            }
+        }
+        
+        getDateStr() {
+            const d = new Date();
+            return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+        }
+    }
+
+    /* 메인 앱 초기화 */
+      class App {
+          constructor() {
+              const isIframe = window.self !== window.top;
+              if (isIframe) { document.body.classList.add('iframe-mode'); }
+              
+              this.ui = new UiUtils();
+              this.viewer = new ViewerManager(this.ui);
+              this.signer = new SignatureManager(this.ui, this.viewer);
+              this.exporter = new Exporter(this.ui);
+              this.storageKey = "confirm3:draft:v1";
+              
+              document.getElementById('btnBack').addEventListener('click', () => { 
+                  if(confirm("종료하시겠습니까?")) {
+                    window.close();
+                    // 만약 window.close()가 작동하지 않으면 (opener가 없는 경우)
+                    setTimeout(() => {
+                        if(!window.closed) {
+                            history.back();
+                        }
+                    }, 100);
+                }
+            });
+              document.getElementById('btnReset').addEventListener('click', () => {
+                  if(confirm("모든 입력을 초기화하시겠습니까?")) {
+                      document.querySelectorAll('input, textarea').forEach(el => {
+                          // 날짜와 귀중, 소속 기본값은 유지하고 싶다면 제외 조건 추가 가능하지만
+                          // 요청하신 리셋 기능은 전체 초기화가 일반적이므로 다 비움 (단, 귀중은 '귀중'으로 복원하는게 좋음)
+                          if(el.classList.contains('recipient-suffix')) {
+                               el.value = '귀중';
+                          } else {
+                               el.value = '';
+                          }
+                      });
+                      this.signer.clearPaper();
+                      this.clearDraft();
+                      this.ui.showToast("초기화 완료");
+                  }
+              });
+              
+              const d = new Date();
+              this.restoreDraft();
+              const dateField = document.getElementById('dateField');
+              if (dateField && !dateField.value) {
+                  dateField.value = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
+              }
+              
+              if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                  window.lucide.createIcons();
+              }
+
+              // [추가] Table Textarea 자동 높이 조절
+              this.initAutoResize();
+              this.bindDraftListeners();
+              this.saveDraft();
+          }
+
+          initAutoResize() {
+            const textareas = document.querySelectorAll('.table-input');
+            const resize = (el) => {
+                el.style.height = 'auto'; 
+                el.style.height = el.scrollHeight + 'px';
+            };
+              textareas.forEach(el => {
+                  el.addEventListener('input', () => resize(el));
+                  // 초기값 있으면 리사이즈
+                  if(el.value) resize(el);
+              });
+          }
+
+          getDraftFields() {
+              return Array.from(document.querySelectorAll('#documentArea input, #documentArea textarea'));
+          }
+
+          getFieldKey(el, idx) {
+              const existing = el.getAttribute('data-store-key') || el.id || el.name;
+              const key = existing || `${el.tagName.toLowerCase()}:${idx}`;
+              if (!el.getAttribute('data-store-key')) {
+                  el.setAttribute('data-store-key', key);
+              }
+              return key;
+          }
+
+          saveDraft() {
+              try {
+                  const fields = {};
+                  this.getDraftFields().forEach((el, idx) => {
+                      const key = this.getFieldKey(el, idx);
+                      fields[key] = el.value;
+                  });
+                  const signature = this.signer && typeof this.signer.getPaperState === "function"
+                      ? this.signer.getPaperState()
+                      : null;
+                  localStorage.setItem(this.storageKey, JSON.stringify({ fields, signature }));
+              } catch (e) {
+                  console.warn("Draft save skipped:", e);
+              }
+          }
+
+          restoreDraft() {
+              try {
+                  const raw = localStorage.getItem(this.storageKey);
+                  if (!raw) return;
+                  const data = JSON.parse(raw);
+                  const fields = data && data.fields ? data.fields : {};
+                  this.getDraftFields().forEach((el, idx) => {
+                      const key = this.getFieldKey(el, idx);
+                      if (Object.prototype.hasOwnProperty.call(fields, key)) {
+                          el.value = fields[key];
+                      }
+                  });
+                  if (data && data.signature && this.signer && typeof this.signer.setPaperState === "function") {
+                      requestAnimationFrame(() => this.signer.setPaperState(data.signature));
+                  }
+              } catch (e) {
+                  console.warn("Draft restore skipped:", e);
+              }
+          }
+
+          clearDraft() {
+              try {
+                  localStorage.removeItem(this.storageKey);
+              } catch (e) {
+                  console.warn("Draft clear skipped:", e);
+              }
+          }
+
+          bindDraftListeners() {
+              const persist = () => {
+                  this.saveDraft();
+                  window.dispatchEvent(new CustomEvent('confirm:dirty', {
+                      detail: { source: 'user-input' }
+                  }));
+              };
+              this.getDraftFields().forEach((el) => {
+                  el.addEventListener('input', persist);
+                  el.addEventListener('change', persist);
+                  el.addEventListener('blur', persist);
+              });
+              window.addEventListener('beforeunload', persist);
+              if (this.signer) {
+                  this.signer.onPaperChange = persist;
+              }
+          }
+      }
+
+      class ConfirmBridge {
+          constructor(app) {
+              this.app = app;
+              this.isReadySent = false;
+              this.allowedIncoming = new Set([
+                  'confirm:init',
+                  'confirm:reset',
+                  'confirm:download',
+                  'confirm:setDraft'
+              ]);
+
+              this.onMessage = this.onMessage.bind(this);
+              this.onDownloaded = this.onDownloaded.bind(this);
+              this.onDirty = this.onDirty.bind(this);
+
+              window.addEventListener('message', this.onMessage);
+              window.addEventListener('confirm:downloaded', this.onDownloaded);
+              window.addEventListener('confirm:dirty', this.onDirty);
+          }
+
+          getTargetOrigin(eventOrigin) {
+              if (eventOrigin && eventOrigin !== 'null') return eventOrigin;
+              return window.location.origin;
+          }
+
+          post(type, payload = {}, targetOrigin = window.location.origin) {
+              if (!window.parent || window.parent === window) return;
+              window.parent.postMessage({ type, payload }, targetOrigin);
+          }
+
+          postError(message, targetOrigin = window.location.origin, details = null) {
+              this.post('confirm:error', {
+                  message,
+                  details: details || undefined
+              }, targetOrigin);
+          }
+
+          validateMessage(event) {
+              if (event.source !== window.parent) return { ok: false, reason: 'invalid-source' };
+              if (!event.data || typeof event.data !== 'object') return { ok: false, reason: 'invalid-data' };
+              const type = typeof event.data.type === 'string' ? event.data.type : '';
+              if (!this.allowedIncoming.has(type)) return { ok: false, reason: 'unsupported-type', type };
+              if (event.origin && event.origin !== 'null' && event.origin !== window.location.origin) {
+                  return { ok: false, reason: 'invalid-origin', origin: event.origin };
+              }
+              return { ok: true, type, payload: event.data.payload, targetOrigin: this.getTargetOrigin(event.origin) };
+          }
+
+          applyDraftPayload(payload) {
+              if (!payload || typeof payload !== 'object') {
+                  throw new Error('setDraft payload is required');
+              }
+
+              let normalized = null;
+              if (payload.draft && typeof payload.draft === 'object') {
+                  normalized = payload.draft;
+              } else if (payload.fields || payload.signature) {
+                  normalized = { fields: payload.fields || {}, signature: payload.signature || null };
+              } else {
+                  normalized = { fields: payload, signature: null };
+              }
+
+              const fields = normalized && typeof normalized.fields === 'object' && normalized.fields
+                  ? normalized.fields
+                  : {};
+              const signature = normalized && normalized.signature ? normalized.signature : null;
+
+              const draft = { fields: {}, signature };
+              this.app.getDraftFields().forEach((el, idx) => {
+                  const key = this.app.getFieldKey(el, idx);
+                  if (Object.prototype.hasOwnProperty.call(fields, key)) {
+                      draft.fields[key] = fields[key];
+                      return;
+                  }
+
+                  if (el.id && Object.prototype.hasOwnProperty.call(fields, el.id)) {
+                      draft.fields[key] = fields[el.id];
+                      return;
+                  }
+
+                  if (el.name && Object.prototype.hasOwnProperty.call(fields, el.name)) {
+                      draft.fields[key] = fields[el.name];
+                  }
+              });
+
+              localStorage.setItem(this.app.storageKey, JSON.stringify(draft));
+              this.app.restoreDraft();
+              this.app.saveDraft();
+              window.dispatchEvent(new CustomEvent('confirm:dirty', {
+                  detail: { source: 'bridge-setDraft' }
+              }));
+          }
+
+          sendReady(targetOrigin = window.location.origin, reason = 'load') {
+              if (this.isReadySent && reason === 'load') return;
+              this.isReadySent = this.isReadySent || reason === 'load';
+              this.post('confirm:ready', {
+                  reason,
+                  bridge: 'v1'
+              }, targetOrigin);
+          }
+
+          onDownloaded(event) {
+              this.post('confirm:downloaded', event && event.detail ? event.detail : {}, window.location.origin);
+          }
+
+          onDirty(event) {
+              this.post('confirm:dirty', event && event.detail ? event.detail : {}, window.location.origin);
+          }
+
+          onMessage(event) {
+              const parsed = this.validateMessage(event);
+              if (!parsed.ok) {
+                  if (parsed.reason === 'invalid-origin' || parsed.reason === 'invalid-source') return;
+                  this.postError('Unsupported confirm message', this.getTargetOrigin(event.origin), parsed);
+                  return;
+              }
+
+              const { type, payload, targetOrigin } = parsed;
+              try {
+                  if (type === 'confirm:init') {
+                      if (payload) {
+                          this.applyDraftPayload(payload);
+                      } else {
+                          this.app.restoreDraft();
+                      }
+                      this.sendReady(targetOrigin, 'init');
+                      return;
+                  }
+
+                  if (type === 'confirm:reset') {
+                      const btnReset = document.getElementById('btnReset');
+                      if (!btnReset) throw new Error('Reset button not found');
+                      btnReset.click();
+                      window.dispatchEvent(new CustomEvent('confirm:dirty', {
+                          detail: { source: 'bridge-reset' }
+                      }));
+                      return;
+                  }
+
+                  if (type === 'confirm:download') {
+                      const btnDownload = document.getElementById('btnDownload');
+                      if (!btnDownload) throw new Error('Download button not found');
+                      btnDownload.click();
+                      return;
+                  }
+
+                  if (type === 'confirm:setDraft') {
+                      this.applyDraftPayload(payload);
+                      return;
+                  }
+              } catch (e) {
+                  this.postError(e && e.message ? e.message : 'Bridge command failed', targetOrigin, {
+                      type
+                  });
+              }
+          }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+          ensureUiLibs().finally(() => {
+              installLucideFallback();
+              installSignaturePadFallback();
+              const app = new App();
+              const bridge = new ConfirmBridge(app);
+              window.__confirmBridge = bridge;
+              bridge.sendReady(window.location.origin, 'load');
+          });
+      });
+</script>
+</body>
+</html>

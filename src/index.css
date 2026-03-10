@@ -1,0 +1,225 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-main: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+
+    /* Typography */
+    --fs-tiny: 13px;
+    --fs-sm: 15px;
+    --fs-base: 17px;
+    --fs-lg: 20px;
+    --fs-xl: 24px;
+
+    /* Core Colors (HSL) */
+    --background: 210 20% 96%;
+    --foreground: 0 0% 7%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 7%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 7%;
+
+    --primary: 205 95% 59%;
+    --primary-foreground: 0 0% 100%;
+    --primary-bg: 201 100% 94%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 205 95% 59%;
+
+    --radius: 0.75rem;
+
+    /* INOPNC specific tokens */
+    --header-navy: 230 50% 20%;
+    --header-navy-foreground: 0 0% 100%;
+    --sky-focus: 197 71% 73%;
+    --bg-input: 210 40% 98%;
+    --bg-hover: 210 40% 96%;
+    --text-sub: 215 16% 47%;
+
+    /* Status badges */
+    --badge-purple: 263 70% 50%;
+    --badge-green: 142 72% 29%;
+    --badge-red: 0 84% 60%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222 84% 5%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 84% 5%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 84% 5%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 205 95% 59%;
+    --primary-foreground: 0 0% 100%;
+    --primary-bg: 205 100% 12%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 213 27% 84%;
+
+    --header-navy: 230 50% 20%;
+    --header-navy-foreground: 0 0% 100%;
+    --sky-focus: 197 71% 73%;
+    --bg-input: 222 84% 5%;
+    --bg-hover: 217 33% 17%;
+    --text-sub: 215 20% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-main);
+    font-size: var(--fs-base);
+    line-height: 1.65;
+    letter-spacing: 0.005em;
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
+}
+
+/* INOPNC App Container */
+.inopnc-app {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .inopnc-app {
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    border-left: 1px solid hsl(var(--border));
+    border-right: 1px solid hsl(var(--border));
+  }
+}
+
+/* Shadow tokens */
+.shadow-soft {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+.shadow-input-focus {
+  box-shadow: 0 0 0 3px rgba(49, 163, 250, 0.15);
+}
+
+/* Next step guide highlight */
+.next-step-guide {
+  animation: nextStepPulse 2s ease-in-out 2;
+  border: 2px solid #87CEEB !important;
+  border-radius: 16px;
+  padding: 20px;
+  padding-top: 28px;
+  background-color: rgba(135, 206, 235, 0.05) !important;
+  box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.15) !important;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 16px;
+  overflow: visible;
+}
+.next-step-guide::before {
+  content: '다음 단계';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #87CEEB;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 12px;
+  white-space: nowrap;
+  z-index: 30;
+  pointer-events: none;
+  animation: fadeInDown 0.3s ease-out;
+}
+@keyframes nextStepPulse {
+  0%, 100% { border-color: #87CEEB; box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.15); background-color: rgba(135, 206, 235, 0.05); }
+  50% { border-color: #87CEEB; box-shadow: 0 0 0 6px rgba(135, 206, 235, 0.25); background-color: rgba(135, 206, 235, 0.1); }
+}
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-5px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Section error highlight */
+.section-error-highlight {
+  animation: pulse-error 1.5s ease-in-out 3 !important;
+  border: 2px solid hsl(var(--destructive)) !important;
+  border-radius: 16px;
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+@keyframes pulse-error {
+  0%, 100% { background-color: rgba(239, 68, 68, 0.1); }
+  50% { background-color: rgba(239, 68, 68, 0.2); }
+}
+
+/* No scrollbar utility */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Dropdown animation */
+@keyframes dropdownSlide {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
