@@ -4,6 +4,7 @@ import PartnerHomePage from "@/components/partner/PartnerHomePage";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useSiteList } from "@/hooks/useSiteList";
 import { useOperationalWorkerNames } from "@/hooks/useOperationalWorkerNames";
+import { getSiteAffiliationLabel, getSiteBuilderLabel } from "@/lib/siteList";
 import { getHomeMainUrl, getHomeFallbackUrl } from "@/constants/env";
 import { HOME_SITE_STORAGE_KEY, HOME_WORKER_STORAGE_KEY } from "@/constants/storageKeys";
 import { WorkerHomePageLegacy } from "@/pages/HomePage.legacy";
@@ -31,11 +32,12 @@ export default function HomePage() {
     () =>
       siteList
         .map((site) => {
-          const contractor = site.builder || site.company_name || site.dept || "";
+          const affiliation = getSiteAffiliationLabel(site);
+          const contractor = getSiteBuilderLabel(site) || affiliation;
           return {
             value: site.site_id,
             text: site.site_name,
-            dept: contractor,
+            dept: affiliation,
             contractor: contractor || undefined,
           };
         })

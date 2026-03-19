@@ -5,6 +5,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import PartnerHomePage from "@/components/partner/PartnerHomePage";
 import { addToQueue, saveMediaOffline } from "@/lib/offlineStore";
 import { useSiteList } from "@/hooks/useSiteList";
+import { getSiteAffiliationLabel, getSiteBuilderLabel } from "@/lib/siteList";
 import {
   MapPin, Users, HardHat, Package, Image, Camera, ScanLine,
   FileText, ChevronDown, ChevronUp, Plus, Minus, X, ReceiptText
@@ -91,7 +92,7 @@ export function WorkerHomePageLegacy() {
   const today = getTodayYYYYMMDD();
   const saveWorklogMutation = useSaveWorklog();
   const { data: siteList = [] } = useSiteList();
-  const allSites = useMemo(
+  const legacyAllSites = useMemo(
     () =>
       siteList.map((site) => ({
         value: site.site_id,
@@ -99,6 +100,21 @@ export function WorkerHomePageLegacy() {
         dept: site.builder || site.company_name || site.dept || "원청사",
         contractor: site.builder || site.company_name || site.dept || "원청사",
       })),
+    [siteList],
+  );
+
+  const allSites = useMemo(
+    () =>
+      siteList.map((site) => {
+        const affiliation = getSiteAffiliationLabel(site);
+        const contractor = getSiteBuilderLabel(site) || affiliation;
+        return {
+          value: site.site_id,
+          text: site.site_name,
+          dept: affiliation,
+          contractor,
+        };
+      }),
     [siteList],
   );
 
@@ -201,7 +217,8 @@ export function WorkerHomePageLegacy() {
   const handleSiteSelect = (site: (typeof allSites)[number]) => {
     setSelectedSite(site.value);
     setSiteSearch(site.text);
-    setDept(site.contractor || site.dept || "원청사");
+    const nextDept = site.dept || site.contractor || "";
+    setDept(nextDept);
     setShowDropdown(false);
 
     // Next step: scroll to workDate
@@ -421,7 +438,7 @@ export function WorkerHomePageLegacy() {
     const worklogPayload = {
       siteValue: selectedSite,
       siteName: site?.text || siteSearch || "",
-      dept: dept || site?.contractor || site?.dept || "",
+      dept: dept || site?.dept || site?.contractor || "",
       workDate,
       manpower,
       workSets,

@@ -56,6 +56,36 @@ export function createOperationalSiteLookup(sites: SiteListItem[]): OperationalS
   };
 }
 
+export function getSiteAffiliationLabel(site: Pick<SiteListItem, "company_name" | "dept">) {
+  return String(site.company_name || site.dept || "").trim();
+}
+
+export function getSiteBuilderLabel(site: Pick<SiteListItem, "builder">) {
+  return String(site.builder || "").trim();
+}
+
+export function buildSiteSearchDescription(site: Pick<SiteListItem, "builder" | "company_name" | "dept">) {
+  const builder = getSiteBuilderLabel(site);
+  const affiliation = getSiteAffiliationLabel(site);
+
+  if (builder && affiliation) return `원청사 ${builder} · 소속 ${affiliation}`;
+  if (builder) return `원청사 ${builder}`;
+  if (affiliation) return `소속 ${affiliation}`;
+  return undefined;
+}
+
+export function buildSiteSearchKeywords(site: Pick<SiteListItem, "builder" | "company_name" | "dept">) {
+  const builder = getSiteBuilderLabel(site);
+  const affiliation = getSiteAffiliationLabel(site);
+
+  return [
+    builder,
+    affiliation,
+    builder ? `원청사 ${builder}` : "",
+    affiliation ? `소속 ${affiliation}` : "",
+  ].filter((value): value is string => !!value);
+}
+
 export function isOperationalSiteName(name: string, liveSiteNames?: Set<string>) {
   const raw = String(name || "").trim();
   if (!raw) return false;

@@ -15,13 +15,13 @@ export default function ProtectedRoute({
   allowedRoles,
   redirectTo = "/",
 }: ProtectedRouteProps) {
-  const { session, loading, isTestMode } = useAuth();
+  const { session, initialized, isTestMode } = useAuth();
   const { role, loading: roleLoading } = useUserRole();
   const location = useLocation();
   const hasRoleRequirement = Boolean(allowedRoles && allowedRoles.length > 0);
   const waitingForRole = hasRoleRequirement && !!session && !role && !roleLoading;
 
-  if (loading || (hasRoleRequirement && roleLoading) || waitingForRole) {
+  if (!initialized || (hasRoleRequirement && roleLoading) || waitingForRole) {
     return <LoadingScreen />;
   }
 

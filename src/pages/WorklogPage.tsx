@@ -28,7 +28,7 @@ import SiteCombobox, { type SiteComboboxOption } from "@/components/site/SiteCom
 import { useUserRole } from "@/hooks/useUserRole";
 import { useSiteList } from "@/hooks/useSiteList";
 import { useOperationalWorkerNames } from "@/hooks/useOperationalWorkerNames";
-import { rememberRecentSiteValue } from "@/lib/siteList";
+import { buildSiteSearchDescription, buildSiteSearchKeywords, rememberRecentSiteValue } from "@/lib/siteList";
 import {
   useSaveWorklog,
   useUpdateWorklog,
@@ -1036,8 +1036,8 @@ function WorkerWorklogPage() {
         value: site.site_name,
         label: site.site_name,
         siteId: site.site_id,
-        description: site.dept ? toKoreanAffiliation(site.dept) : undefined,
-        keywords: site.dept ? [site.dept, toKoreanAffiliation(site.dept)] : undefined,
+        description: buildSiteSearchDescription(site),
+        keywords: buildSiteSearchKeywords(site),
       })),
     [siteList],
   );

@@ -17,6 +17,8 @@ import { getObjectUrl, listAttachmentRefs, revokeObjectUrl, saveFiles, type Atta
 // PATCH START: shared site list + repo facade (no direct localStorage in UI)
 import { useSiteList } from "@/hooks/useSiteList";
 import {
+  buildSiteSearchDescription,
+  buildSiteSearchKeywords,
   createOperationalSiteLookup,
   isOperationalSiteName,
   resolveOperationalSite,
@@ -258,7 +260,8 @@ function DocPageInner({ restrictCompanyDocs }: { restrictCompanyDocs: boolean })
         value: site.site_name,
         label: site.site_name,
         siteId: site.site_id,
-        description: site.dept || undefined,
+        description: buildSiteSearchDescription(site),
+        keywords: buildSiteSearchKeywords(site),
       })),
     [siteList],
   );

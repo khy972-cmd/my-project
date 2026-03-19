@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { TEST_MODE_KEY, TEST_ROLE_KEY } from "@/constants/storageKeys";
@@ -9,6 +9,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  initialized: boolean;
   isTestMode: boolean;
   testRole: AppRole;
   setTestMode: (v: boolean) => void;
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   loading: true,
+  initialized: false,
   isTestMode: false,
   testRole: "worker",
   setTestMode: () => {},
@@ -31,7 +33,8 @@ export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+  const initializedRef = useRef(false);
   // Production auth mode: force-disable legacy local test bypass.
   const isTestMode = false;
   const testRole: AppRole = "worker";
@@ -40,28 +43,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
-    const loadingTimeout = window.setTimeout(() => {
-      if (isMounted) {
-        setLoading(false);
-      }
-    }, 6000);
+    const finalizeInitialization = () => {
+      if (!isMounted || initializedRef.current) return;
+      initializedRef.current = true;
+      setInitialized(true);
+    };
+    const loadingTimeout = window.setTimeout(finalizeInitialization, 6000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!isMounted) return;
         setSession(session);
-        setLoading(false);
       }
     );
 
     const initializeSession = async () => {
       let shouldStripAuthParams = false;
+      let nextSession: Session | null = null;
 
-      if (hasAuthCodeInUrl()) {
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      if (!isMounted) return;
+
+      if (existingSession) {
+        nextSession = existingSession;
+      } else if (hasAuthCodeInUrl()) {
         const code = new URL(window.location.href).searchParams.get("code");
         if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           if (!error) {
+            nextSession = data.session ?? null;
             shouldStripAuthParams = true;
           } else if (import.meta.env.DEV) {
             console.warn("[auth] failed to exchange auth code", error);
@@ -69,9 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
       if (!isMounted) return;
-      setSession(session);
+      setSession(nextSession);
 
       if (shouldStripAuthParams) {
         stripAuthCallbackParamsFromUrl();
@@ -86,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => {
         if (!isMounted) return;
         window.clearTimeout(loadingTimeout);
-        setLoading(false);
+        finalizeInitialization();
       });
 
     return () => {
@@ -113,7 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       session,
       user: session?.user ?? null,
-      loading,
+      loading: !initialized,
+      initialized,
       isTestMode,
       testRole,
       setTestMode,

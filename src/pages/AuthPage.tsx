@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import logoImg from "@/assets/logo_b.png";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import { clearUserRoleCache, getUserRole } from "@/lib/userRole";
 import { buildAppUrl, getAuthCallbackError, stripAuthCallbackParamsFromUrl } from "@/lib/authUrl";
 
@@ -25,6 +26,7 @@ export default function AuthPage() {
   const [showForgot, setShowForgot] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { session, initialized } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -51,6 +53,33 @@ export default function AuthPage() {
     toast.error(authError);
     stripAuthCallbackParamsFromUrl();
   }, []);
+
+  useEffect(() => {
+    if (!initialized || !session?.user?.id) return;
+
+    let isMounted = true;
+
+    const redirectAuthenticatedUser = async () => {
+      let destination = redirectAfterLogin ?? "/";
+
+      if (!redirectAfterLogin) {
+        const role = await getUserRole(session.user.id);
+        if (!isMounted) return;
+
+        if (role === "admin" || role === "manager") {
+          destination = "/admin";
+        }
+      }
+
+      navigate(destination, { replace: true });
+    };
+
+    void redirectAuthenticatedUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialized, navigate, redirectAfterLogin, session?.user?.id]);
 
   useEffect(() => {
     if (isLogin || showForgot || !isPartnerSignup) return;
