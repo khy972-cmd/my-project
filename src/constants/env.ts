@@ -1,19 +1,18 @@
+import { BUILD_SHA } from "@/lib/buildMeta";
+
 /**
- * 앱 기본 경로 및 환경 상수
- * BASE_URL, 정적 자산 경로 등 공통 사용
+ * ??湲곕낯 寃쎈줈 諛??섍꼍 ?곸닔
+ * BASE_URL, ?뺤쟻 ?먯궛 寃쎈줈 ??怨듯넻 ?ъ슜
  */
 
 const _APP_BASE = import.meta.env.BASE_URL || "/";
 export const APP_BASE = _APP_BASE;
 export const BASE_PREFIX = _APP_BASE.endsWith("/") ? _APP_BASE : `${_APP_BASE}/`;
 
-export const HOME_VER =
-  import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA ??
-  import.meta.env.VERCEL_GIT_COMMIT_SHA ??
-  Date.now().toString();
+export const HOME_VER = BUILD_SHA;
 
-/** 홈 iframe URL */
+/** ??iframe URL */
 export const getHomeMainUrl = () => `${BASE_PREFIX}home-v2/main-v2-app/index.html?v=${HOME_VER}`;
 export const getHomeFallbackUrl = () => `${BASE_PREFIX}home-v2/main-v2-app/index.html`;
 
-/** (구) 인증서 확인 iframe URL는 더 이상 사용하지 않습니다. */
+/** (援? ?몄쬆???뺤씤 iframe URL?????댁긽 ?ъ슜?섏? ?딆뒿?덈떎. */

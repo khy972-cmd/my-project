@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { normalizeAppRole, type AppRole } from "@/lib/roles";
@@ -17,6 +17,7 @@ export default function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { session, loading, isTestMode } = useAuth();
   const { role, loading: roleLoading } = useUserRole();
+  const location = useLocation();
   const hasRoleRequirement = Boolean(allowedRoles && allowedRoles.length > 0);
   const waitingForRole = hasRoleRequirement && !!session && !role && !roleLoading;
 
@@ -25,7 +26,8 @@ export default function ProtectedRoute({
   }
 
   if (!session && !isTestMode) {
-    return <Navigate to="/auth" replace />;
+    const authTarget = `/auth${location.search}${location.hash}`;
+    return <Navigate to={authTarget} replace state={{ from: location }} />;
   }
 
   if (hasRoleRequirement) {

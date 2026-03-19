@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Eye, EyeOff, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import logoImg from "@/assets/logo_b.png";
 import { toast } from "sonner";
 import { clearUserRoleCache, getUserRole } from "@/lib/userRole";
+import { buildAppUrl, getAuthCallbackError, stripAuthCallbackParamsFromUrl } from "@/lib/authUrl";
 
 type SignupAffiliation = "worker_inopnc" | "partner_company";
 
@@ -23,6 +24,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,6 +38,19 @@ export default function AuthPage() {
   const [agreeTerms, setAgreeTerms] = useState(false);
 
   const isPartnerSignup = signupAffiliation === "partner_company";
+  const redirectAfterLogin = useMemo(() => {
+    const from = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from;
+    if (!from?.pathname || from.pathname === "/auth" || from.pathname === "/reset-password") return null;
+    return `${from.pathname}${from.search ?? ""}${from.hash ?? ""}`;
+  }, [location.state]);
+
+  useEffect(() => {
+    const authError = getAuthCallbackError();
+    if (!authError) return;
+
+    toast.error(authError);
+    stripAuthCallbackParamsFromUrl();
+  }, []);
 
   useEffect(() => {
     if (isLogin || showForgot || !isPartnerSignup) return;
@@ -95,13 +110,19 @@ export default function AuthPage() {
   };
 
   const handleLogin = async () => {
+    if (!isSupabaseConfigured) {
+      toast.error("로그인 설정이 완료되지 않았습니다. 관리자에게 Supabase 환경변수를 확인해 달라고 요청해 주세요.");
+      return;
+    }
+
     if (!email || !password) {
       toast.error("이메일과 비밀번호를 입력하세요.");
       return;
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
     setLoading(false);
 
     if (error) {
@@ -110,9 +131,9 @@ export default function AuthPage() {
     }
 
     const userId = data.user?.id;
-    let destination = "/";
+    let destination = redirectAfterLogin ?? "/";
 
-    if (userId) {
+    if (userId && !redirectAfterLogin) {
       clearUserRoleCache(userId);
       const role = await getUserRole(userId);
       if (role === "admin" || role === "manager") {
@@ -125,6 +146,11 @@ export default function AuthPage() {
   };
 
   const handleSignup = async () => {
+    if (!isSupabaseConfigured) {
+      toast.error("회원가입 설정이 완료되지 않았습니다. 관리자에게 Supabase 환경변수를 확인해 달라고 요청해 주세요.");
+      return;
+    }
+
     if (!name.trim() || !email.trim()) {
       toast.error("필수 항목을 모두 입력하세요.");
       return;
@@ -166,10 +192,10 @@ export default function AuthPage() {
 
     setLoading(true);
     const { error } = await supabase.auth.signUp({
-      email: email.trim(),
+      email: email.trim().toLowerCase(),
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: buildAppUrl("/"),
         data: metadata,
       },
     });
@@ -187,14 +213,20 @@ export default function AuthPage() {
   };
 
   const handleForgotPassword = async () => {
+    if (!isSupabaseConfigured) {
+      toast.error("비밀번호 재설정 설정이 완료되지 않았습니다. 관리자에게 Supabase 환경변수를 확인해 달라고 요청해 주세요.");
+      return;
+    }
+
     if (!email) {
       toast.error("이메일을 입력하세요.");
       return;
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: buildAppUrl("/reset-password"),
     });
     setLoading(false);
 

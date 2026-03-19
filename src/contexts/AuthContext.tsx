@@ -3,6 +3,7 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { TEST_MODE_KEY, TEST_ROLE_KEY } from "@/constants/storageKeys";
 import { type AppRole } from "@/lib/roles";
+import { hasAuthCodeInUrl, stripAuthCallbackParamsFromUrl } from "@/lib/authUrl";
 
 interface AuthContextType {
   session: Session | null;
@@ -53,11 +54,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (!isMounted) return;
-        setSession(session);
-      })
+    const initializeSession = async () => {
+      let shouldStripAuthParams = false;
+
+      if (hasAuthCodeInUrl()) {
+        const code = new URL(window.location.href).searchParams.get("code");
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (!error) {
+            shouldStripAuthParams = true;
+          } else if (import.meta.env.DEV) {
+            console.warn("[auth] failed to exchange auth code", error);
+          }
+        }
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!isMounted) return;
+      setSession(session);
+
+      if (shouldStripAuthParams) {
+        stripAuthCallbackParamsFromUrl();
+      }
+    };
+
+    initializeSession()
       .catch(() => {
         if (!isMounted) return;
         setSession(null);
