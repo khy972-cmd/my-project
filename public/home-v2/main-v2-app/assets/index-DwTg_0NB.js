@@ -17047,7 +17047,7 @@ function pk({ children: e }) {
       })
     }, []),
     s = y.useCallback((m, h, v) => {
-      n(k => ({ ...k, selectedSite: m, siteSearch: h, dept: `${h}팀` }))
+      n(k => ({ ...k, selectedSite: m, siteSearch: h, dept: v || '' }))
     }, []),
     i = y.useCallback(() => {
       n(m => ({
