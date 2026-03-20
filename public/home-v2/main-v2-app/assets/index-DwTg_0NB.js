@@ -19902,10 +19902,18 @@ function Fk() {
     [i, l] = y.useState([{ text: '현장을 선택해주세요.', isUser: !1 }]),
     [a, u] = y.useState({}),
     [d, f] = y.useState(!1),
-    [g, p] = y.useState({ member: '', process: '', type: '' }),
+    [g, p] = y.useState({
+      member: '',
+      process: '',
+      type: '',
+      customMember: '',
+      customProcess: '',
+      customType: '',
+    }),
     [b, x] = y.useState(() => Dk()),
     [w, m] = y.useState(''),
     [h, v] = y.useState(!1),
+    [workerQuery, setWorkerQuery] = y.useState(''),
     k = y.useMemo(() => fy(), []),
     N = y.useMemo(() => b.map(C => k.find(_ => _.value === C)).filter(C => !!C), [b, k]),
     j = y.useMemo(() => (N.length > 0 ? N.slice(0, op) : k.slice(0, op)), [N, k]),
@@ -19926,9 +19934,14 @@ function Fk() {
       )
       return C.length > 0 ? C : py
     }, [e.manpowerList]),
+    workerMatches = y.useMemo(() => {
+      const C = (workerQuery || a.worker || '').trim().toLowerCase()
+      return (C ? I.filter(_ => _.toLowerCase().includes(C)) : I).slice(0, 9)
+    }, [I, a.worker, workerQuery]),
+    resolveChatFieldValue = (C, _) => (C === '기타' ? (_ || '').trim() : (C || '').trim()),
     D = o === 1 && h && w.trim().length > 0,
-    Q = y.useCallback((C, _) => {
-      l(B => [...B, { text: C, isUser: _ }])
+    Q = y.useCallback((C, _, B) => {
+      l(H => [...H, { text: C, isUser: _, editStep: _ ? B : void 0 }])
     }, []),
     U = y.useCallback(
       (C, _ = 800) => {
@@ -19943,7 +19956,7 @@ function Fk() {
       ;(u(_ => ({ ..._, site: C.text, siteValue: C.value, dept: C.dept })),
         m(''),
         v(!1),
-        Q(C.text, !0),
+        Q(C.text, !0, 1),
         r(C.value, C.text, C.dept),
         x(_ => {
           const B = [C.value, ..._.filter(H => H !== C.value)].slice(0, Ik)
@@ -19954,21 +19967,60 @@ function Fk() {
     },
     $ = () => {
       const C = a.date || new Date().toISOString().slice(0, 10),
-        _ = new Date(C).toLocaleDateString('ko-KR')
-      ;(Q(_, !0), U('작업자는 누구인가요?'), s(3))
+        _ = new Date(C).toLocaleDateString('ko-KR'),
+        B = (a.worker || e.manpowerList.find(H => (H.worker || '').trim())?.worker || I[0] || '').trim()
+      ;(u(H => ({ ...H, date: C, worker: B })),
+        setWorkerQuery(B),
+        Q(_, !0, 2),
+        U('작업자는 누구인가요?'),
+        s(3))
     },
     re = C => {
-      ;(u(_ => ({ ..._, worker: C })), Q(C, !0), U('부재명과 작업공정을 선택해주세요.'), s(4))
+      const _ = C.trim()
+      _ &&
+        (u(B => ({ ...B, worker: _ })),
+        setWorkerQuery(_),
+        Q(_, !0, 3),
+        U('부재명과 작업공정을 선택해주세요.'),
+        s(4))
     },
-    K = (C, _) => {
-      const B = { ...g, [C]: _ }
-      if ((p(B), B.member && B.process)) {
-        const H = B.type ? ` / 유형:${B.type}` : ''
-        ;(Q(`부재:${B.member} / 공정:${B.process}${H}`, !0),
-          u(Z => ({ ...Z, ...B })),
+    workerSubmit = () => {
+      const C = (a.worker || workerQuery).trim()
+      C ? re(C) : U('작업자 이름을 선택하거나 직접 입력해주세요.', 120)
+    },
+    syncChatWorkSet = C => {
+      const _ = resolveChatFieldValue(C.member, C.customMember),
+        B = resolveChatFieldValue(C.process, C.customProcess),
+        H = resolveChatFieldValue(C.type, C.customType),
+        Z = C.type === '기타' && !H
+      if ((p(C), _ && B && !Z)) {
+        const $e = H ? ` / 유형:${H}` : ''
+        ;(Q(`부재:${_} / 공정:${B}${$e}`, !0, 4),
+          u(re => ({ ...re, member: _, process: B, type: H })),
           U('작업일지를 저장할까요?'),
           s(5))
+        return
       }
+      _ && !B
+        ? U('이어서 작업공정을 선택하거나 직접 입력해주세요.', 120)
+        : !_ && B
+          ? U('이어서 부재명을 선택하거나 직접 입력해주세요.', 120)
+          : _ && B && Z
+            ? U('작업유형을 직접 입력하거나 다시 선택해주세요.', 120)
+          : !_ && !B && U('부재명과 작업공정은 필수입니다.', 120)
+    },
+    K = (C, _) => {
+      const B = {
+        ...g,
+        [C]: _,
+        ...(C === 'member' && _ !== '기타' ? { customMember: '' } : {}),
+        ...(C === 'process' && _ !== '기타' ? { customProcess: '' } : {}),
+        ...(C === 'type' && _ !== '기타' ? { customType: '' } : {}),
+      }
+      syncChatWorkSet(B)
+    },
+    updateChatCustomValue = (C, _) => {
+      syncChatWorkSet({ ...g, [C]: _ })
     },
     ee = y.useCallback(() => {
       n(C => {
@@ -20098,11 +20150,22 @@ function Fk() {
               {
                 className: `mb-6 ${C.isUser ? 'text-right' : 'text-left'}`,
                 style: { animation: 'slideIn 0.3s ease-out' },
-                children: c.jsx('div', {
-                  className: `inline-block max-w-[85%] rounded-[20px] px-5 py-4 text-base leading-relaxed ${C.isUser ? 'bg-primary text-primary-foreground' : 'border border-border bg-card text-foreground shadow-sm'}`,
-                  style: { whiteSpace: 'pre-line' },
-                  children: C.text,
-                }),
+                children:
+                  C.isUser && C.editStep
+                    ? c.jsx('button', {
+                        type: 'button',
+                        onClick: () => s(C.editStep),
+                        className:
+                          'inline-block max-w-[85%] rounded-[20px] bg-primary px-5 py-4 text-left text-base leading-relaxed text-primary-foreground transition-opacity hover:opacity-90',
+                        style: { whiteSpace: 'pre-line' },
+                        title: '탭해서 답변 수정',
+                        children: C.text,
+                      })
+                    : c.jsx('div', {
+                        className: `inline-block max-w-[85%] rounded-[20px] px-5 py-4 text-base leading-relaxed ${C.isUser ? 'bg-primary text-primary-foreground' : 'border border-border bg-card text-foreground shadow-sm'}`,
+                        style: { whiteSpace: 'pre-line' },
+                        children: C.text,
+                      }),
               },
               _
             )
@@ -20233,24 +20296,64 @@ function Fk() {
           o === 3 &&
             c.jsxs('div', {
               children: [
-                c.jsx('label', {
-                  className: 'mb-2 block text-[15px] font-bold text-muted-foreground',
-                  children: '작업자를 선택해주세요',
-                }),
-                c.jsx('div', {
-                  className: 'grid grid-cols-3 gap-2',
-                  children: I.map(C =>
-                    c.jsx(
-                      'button',
-                      {
-                        onClick: () => re(C),
-                        className:
-                          'h-12 rounded-xl border border-border bg-card text-[15px] font-bold transition-all hover:border-primary hover:bg-primary-bg',
-                        children: C,
+                c.jsxs('div', {
+                  className: 'mb-3',
+                  children: [
+                    c.jsx('label', {
+                      className: 'mb-2 block text-[15px] font-bold text-muted-foreground',
+                      children: '작업자를 선택하거나 직접 입력해주세요',
+                    }),
+                    c.jsx('input', {
+                      type: 'text',
+                      value: workerQuery || a.worker || '',
+                      onChange: C => {
+                        const _ = C.target.value
+                        ;(setWorkerQuery(_), u(B => ({ ...B, worker: _ })))
                       },
-                      C
-                    )
-                  ),
+                      onKeyDown: C => {
+                        C.key === 'Enter' && (C.preventDefault(), workerSubmit())
+                      },
+                      placeholder: '기본값은 접속자 본인입니다',
+                      className:
+                        'h-[50px] w-full rounded-xl border border-border bg-card px-4 text-[15px] font-medium outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20',
+                    }),
+                  ],
+                }),
+                c.jsxs('div', {
+                  className: 'mb-3',
+                  children: [
+                    c.jsx('div', {
+                      className: 'mb-2 px-1 text-xs font-bold text-muted-foreground',
+                      children: '검색 결과',
+                    }),
+                    workerMatches.length > 0
+                      ? c.jsx('div', {
+                          className: 'grid grid-cols-3 gap-2',
+                          children: workerMatches.map(C =>
+                            c.jsx(
+                              'button',
+                              {
+                                type: 'button',
+                                onClick: () => re(C),
+                                className: `h-12 rounded-xl border text-[15px] font-bold transition-all ${((a.worker || '').trim() || (workerQuery || '').trim()) === C ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card hover:border-primary hover:bg-primary-bg'}`,
+                                children: C,
+                              },
+                              C
+                            )
+                          ),
+                        })
+                      : c.jsx('div', {
+                          className:
+                            'rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-center text-[13px] font-medium text-muted-foreground',
+                          children: '검색 결과가 없으면 이름을 직접 입력해주세요',
+                        }),
+                  ],
+                }),
+                c.jsx('button', {
+                  onClick: workerSubmit,
+                  className:
+                    'h-[54px] w-full rounded-xl bg-primary text-[17px] font-bold text-primary-foreground shadow-sm transition-all hover:opacity-90',
+                  children: '이 작업자로 진행하기',
                 }),
               ],
             }),
@@ -20281,6 +20384,15 @@ function Fk() {
                         )
                       ),
                     }),
+                    g.member === '기타' &&
+                      c.jsx('input', {
+                        type: 'text',
+                        value: g.customMember,
+                        onChange: C => updateChatCustomValue('customMember', C.target.value),
+                        placeholder: '부재명을 직접 입력해주세요',
+                        className:
+                          'mt-2 h-[50px] w-full rounded-xl border border-border bg-card px-4 text-[15px] font-medium outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20',
+                      }),
                   ],
                 }),
                 c.jsxs('div', {
@@ -20307,6 +20419,15 @@ function Fk() {
                         )
                       ),
                     }),
+                    g.process === '기타' &&
+                      c.jsx('input', {
+                        type: 'text',
+                        value: g.customProcess,
+                        onChange: C => updateChatCustomValue('customProcess', C.target.value),
+                        placeholder: '작업공정을 직접 입력해주세요',
+                        className:
+                          'mt-2 h-[50px] w-full rounded-xl border border-border bg-card px-4 text-[15px] font-medium outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20',
+                      }),
                   ],
                 }),
                 c.jsxs('div', {
@@ -20330,11 +20451,20 @@ function Fk() {
                         )
                       ),
                     }),
+                    g.type === '기타' &&
+                      c.jsx('input', {
+                        type: 'text',
+                        value: g.customType,
+                        onChange: C => updateChatCustomValue('customType', C.target.value),
+                        placeholder: '작업유형을 직접 입력해주세요',
+                        className:
+                          'mt-2 h-[50px] w-full rounded-xl border border-border bg-card px-4 text-[15px] font-medium outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20',
+                      }),
                   ],
                 }),
                 c.jsx('div', {
                   className: 'mt-2 text-center text-[13px] text-muted-foreground',
-                  children: '부재명/작업공정은 필수, 작업유형은 선택입니다',
+                  children: '부재명/작업공정은 필수이며, 기타 선택 시 직접 입력할 수 있습니다',
                 }),
               ],
             }),

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PartnerHomePage from "@/components/partner/PartnerHomePage";
+import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useSiteList } from "@/hooks/useSiteList";
 import { useOperationalWorkerNames } from "@/hooks/useOperationalWorkerNames";
@@ -19,6 +20,7 @@ type HomeRenderMode = "partner" | HomeIframeMode;
 // Before loading the iframe, sync the live site list into same-origin storage so the static app
 // can render the same operational site search data as the rest of the product.
 export default function HomePage() {
+  const { user } = useAuth();
   const { isPartner, loading: roleLoading } = useUserRole();
   const { data: siteList = [], isLoading: siteListLoading, dataUpdatedAt } = useSiteList();
   const { data: workerNames = [], isLoading: workerNamesLoading, dataUpdatedAt: workerNamesUpdatedAt } = useOperationalWorkerNames();
@@ -43,6 +45,22 @@ export default function HomePage() {
         })
         .filter((site) => site.value && site.text),
     [siteList],
+  );
+
+  const currentWorkerName = useMemo(() => {
+    const metadataName = typeof user?.user_metadata?.name === "string" ? user.user_metadata.name.trim() : "";
+    if (metadataName) return metadataName;
+
+    const email = typeof user?.email === "string" ? user.email.trim() : "";
+    if (!email) return "";
+
+    return email.split("@")[0]?.trim() || email;
+  }, [user?.email, user?.user_metadata?.name]);
+
+  const homeWorkerOptions = useMemo(
+    () =>
+      [...new Set([currentWorkerName, ...workerNames].map((name) => String(name || "").trim()).filter(Boolean))],
+    [currentWorkerName, workerNames],
   );
 
   const clearLoadCheckTimer = useCallback(() => {
@@ -82,12 +100,12 @@ export default function HomePage() {
     }
     try {
       window.localStorage.setItem(HOME_SITE_STORAGE_KEY, JSON.stringify(homeSiteOptions));
-      window.localStorage.setItem(HOME_WORKER_STORAGE_KEY, JSON.stringify(workerNames));
+      window.localStorage.setItem(HOME_WORKER_STORAGE_KEY, JSON.stringify(homeWorkerOptions));
     } catch {
       // ignore storage failures; the iframe will fall back to empty live data
     }
     setSiteSyncReady(true);
-  }, [homeSiteOptions, isPartner, roleLoading, siteListLoading, workerNames, workerNamesLoading]);
+  }, [homeSiteOptions, homeWorkerOptions, isPartner, roleLoading, siteListLoading, workerNamesLoading]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -144,7 +162,7 @@ export default function HomePage() {
       }}
     >
       <iframe
-        key={`${renderMode}-${siteVersion}-${workerVersion}-${homeSiteOptions.length}-${workerNames.length}`}
+        key={`${renderMode}-${siteVersion}-${workerVersion}-${homeSiteOptions.length}-${homeWorkerOptions.length}-${currentWorkerName}`}
         ref={iframeRef}
         title="INOPNC Home Main"
         src={iframeSrc}

@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { useSaveWorklog } from "@/hooks/useSupabaseWorklogs";
+import { useOperationalWorkerNames } from "@/hooks/useOperationalWorkerNames";
 import { useUserRole } from "@/hooks/useUserRole";
 import PartnerHomePage from "@/components/partner/PartnerHomePage";
 import { addToQueue, saveMediaOffline } from "@/lib/offlineStore";
@@ -88,10 +90,12 @@ export default function HomePageLegacy() {
 
 /** iframe 실패 시 폴백용 워커 홈 (HomePage.tsx에서 import) */
 export function WorkerHomePageLegacy() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const today = getTodayYYYYMMDD();
   const saveWorklogMutation = useSaveWorklog();
   const { data: siteList = [] } = useSiteList();
+  const { data: workerNames = [] } = useOperationalWorkerNames();
   const legacyAllSites = useMemo(
     () =>
       siteList.map((site) => ({
@@ -118,6 +122,33 @@ export function WorkerHomePageLegacy() {
     [siteList],
   );
 
+  const currentWorkerName = useMemo(() => {
+    const metadataName = typeof user?.user_metadata?.name === "string" ? user.user_metadata.name.trim() : "";
+    if (metadataName) return metadataName;
+
+    const email = typeof user?.email === "string" ? user.email.trim() : "";
+    if (!email) return "";
+
+    return email.split("@")[0]?.trim() || email;
+  }, [user?.email, user?.user_metadata?.name]);
+
+  const availableWorkers = useMemo(
+    () =>
+      [...new Set([currentWorkerName, ...workerNames, ...PREDEFINED_WORKERS].map((name) => String(name || "").trim()).filter(Boolean))],
+    [currentWorkerName, workerNames],
+  );
+
+  const createDefaultManpowerRow = useCallback(
+    () => ({
+      id: Date.now(),
+      worker: currentWorkerName,
+      workHours: 1.0,
+      isCustom: !currentWorkerName,
+      locked: false,
+    }),
+    [currentWorkerName],
+  );
+
   /* Site */
   const [selectedSite, setSelectedSite] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
@@ -126,9 +157,7 @@ export function WorkerHomePageLegacy() {
   const [workDate, setWorkDate] = useState(today);
 
   /* Manpower */
-  const [manpower, setManpower] = useState<ManpowerItem[]>([
-    { id: 1, worker: "이현수", workHours: 1.0, isCustom: false, locked: true },
-  ]);
+  const [manpower, setManpower] = useState<ManpowerItem[]>(() => [createDefaultManpowerRow()]);
 
   /* Work Sets */
   const [workSets, setWorkSets] = useState<WorkSet[]>([
@@ -245,6 +274,16 @@ export function WorkerHomePageLegacy() {
   };
 
   /* ─── Manpower ─── */
+  useEffect(() => {
+    if (!currentWorkerName) return;
+    setManpower((prev) => {
+      if (prev.length === 0) return [createDefaultManpowerRow()];
+      const [first, ...rest] = prev;
+      if (first.isCustom || (first.worker && first.worker !== currentWorkerName)) return prev;
+      return [{ ...first, worker: currentWorkerName, isCustom: false, locked: false }, ...rest];
+    });
+  }, [createDefaultManpowerRow, currentWorkerName]);
+
   const addManpower = () => {
     setManpower(prev => [...prev, { id: Date.now(), worker: "", workHours: 1.0, isCustom: false, locked: false }]);
   };
@@ -614,7 +653,7 @@ export function WorkerHomePageLegacy() {
     setSiteSearch("");
     setDept("INOPNC");
     setWorkDate(today);
-    setManpower([{ id: 1, worker: "이현수", workHours: 1.0, isCustom: false, locked: true }]);
+    setManpower([createDefaultManpowerRow()]);
     setWorkSets([{ id: Date.now(), member: "", process: "", type: "", location: { block: "", dong: "", floor: "" }, customMemberValue: "", customProcessValue: "", customTypeValue: "" }]);
     setMaterials([]);
     setPhotos([]);
@@ -827,7 +866,7 @@ export function WorkerHomePageLegacy() {
                   style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", backgroundSize: "16px" }}
                 >
                   <option value="">작업자</option>
-                  {PREDEFINED_WORKERS.map(w => <option key={w} value={w}>{w}</option>)}
+                  {availableWorkers.map(w => <option key={w} value={w}>{w}</option>)}
                   <option value="__custom__">직접입력</option>
                 </select>
               )}
