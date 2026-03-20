@@ -19948,10 +19948,6 @@ function Fk() {
       )
       return C.length > 0 ? C : py
     }, [a.worker, e.manpowerList]),
-    workerMatches = y.useMemo(() => {
-      const C = (workerQuery || a.worker || '').trim().toLowerCase()
-      return (C ? I.filter(_ => _.toLowerCase().includes(C)) : I).slice(0, 9)
-    }, [I, a.worker, workerQuery]),
     resolveChatFieldValue = (C, _) => (C === '기타' ? (_ || '').trim() : (C || '').trim()),
     D = o === 1 && h && w.trim().length > 0,
     Q = y.useCallback((C, _, B) => {
@@ -20203,7 +20199,7 @@ function Fk() {
         ],
       }),
       c.jsxs('div', {
-        className: `border-t border-border bg-card p-5 overflow-y-auto ${sheetExpanded ? (D ? 'max-h-[72vh]' : 'max-h-[56vh]') : 'max-h-[96px]'}`,
+        className: `border-t border-border bg-card p-5 ${sheetExpanded ? `overflow-y-auto ${D ? 'max-h-[72vh]' : 'max-h-[56vh]'}` : 'overflow-hidden'}`,
         style: { borderRadius: '20px 20px 0 0', boxShadow: '0 -4px 20px rgba(0,0,0,0.05)' },
         children: [
           c.jsx('div', {
@@ -20219,7 +20215,8 @@ function Fk() {
               ],
             }),
           }),
-          o === 1 &&
+          sheetExpanded &&
+            o === 1 &&
             c.jsxs('div', {
               className: 'flex flex-col gap-3',
               children: [
@@ -20298,7 +20295,8 @@ function Fk() {
                 }),
               ],
             }),
-          o === 2 &&
+          sheetExpanded &&
+            o === 2 &&
             c.jsxs('div', {
               children: [
                 c.jsx('label', {
@@ -20320,7 +20318,8 @@ function Fk() {
                 }),
               ],
             }),
-          o === 3 &&
+          sheetExpanded &&
+            o === 3 &&
             c.jsxs('div', {
               children: [
                 c.jsxs('div', {
@@ -20328,10 +20327,11 @@ function Fk() {
                   children: [
                     c.jsx('label', {
                       className: 'mb-2 block text-[15px] font-bold text-muted-foreground',
-                      children: '작업자를 선택하거나 직접 입력해주세요',
+                      children: '작업자를 선택해주세요',
                     }),
                     c.jsx('input', {
                       type: 'text',
+                      list: 'worklog-helper-worker-options',
                       value: workerQuery || a.worker || '',
                       onChange: C => {
                         const _ = C.target.value
@@ -20344,37 +20344,15 @@ function Fk() {
                       className:
                         'h-[50px] w-full rounded-xl border border-border bg-card px-4 text-[15px] font-medium outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20',
                     }),
+                    c.jsx('datalist', {
+                      id: 'worklog-helper-worker-options',
+                      children: I.map(C => c.jsx('option', { value: C, children: C }, C)),
+                    }),
                   ],
                 }),
-                c.jsxs('div', {
-                  className: 'mb-3',
-                  children: [
-                    c.jsx('div', {
-                      className: 'mb-2 px-1 text-xs font-bold text-muted-foreground',
-                      children: '검색 결과',
-                    }),
-                    workerMatches.length > 0
-                      ? c.jsx('div', {
-                          className: 'grid grid-cols-3 gap-2',
-                          children: workerMatches.map(C =>
-                            c.jsx(
-                              'button',
-                              {
-                                type: 'button',
-                                onClick: () => re(C),
-                                className: `h-12 rounded-xl border text-[15px] font-bold transition-all ${((a.worker || '').trim() || (workerQuery || '').trim()) === C ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card hover:border-primary hover:bg-primary-bg'}`,
-                                children: C,
-                              },
-                              C
-                            )
-                          ),
-                        })
-                      : c.jsx('div', {
-                          className:
-                            'rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-center text-[13px] font-medium text-muted-foreground',
-                          children: '검색 결과가 없으면 이름을 직접 입력해주세요',
-                        }),
-                  ],
+                c.jsx('div', {
+                  className: 'mb-3 text-center text-[13px] text-muted-foreground',
+                  children: '기존 작업자 목록과 연동되며, 목록에 없으면 직접 입력할 수 있습니다',
                 }),
                 c.jsx('button', {
                   onClick: workerSubmit,
@@ -20388,7 +20366,8 @@ function Fk() {
                 }),
               ],
             }),
-          o === 4 &&
+          sheetExpanded &&
+            o === 4 &&
             c.jsxs('div', {
               children: [
                 c.jsxs('div', {
@@ -20499,7 +20478,8 @@ function Fk() {
                 }),
               ],
             }),
-          o === 5 &&
+          sheetExpanded &&
+            o === 5 &&
             c.jsxs('div', {
               children: [
                 c.jsx('button', {
