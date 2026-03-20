@@ -372,6 +372,16 @@ export default function AdminWorklogManager() {
                 </div>
               </div>
             )}
+            {reviewModal.status === "approved" && (
+              <div className="border-t border-border pt-4">
+                <button
+                  onClick={() => statusMutation.mutate({ worklogId: reviewModal.worklogId, newStatus: "draft" })}
+                  className="w-full h-12 rounded-xl border border-primary/30 bg-primary/10 text-[15px] font-bold text-primary cursor-pointer active:scale-[0.98]"
+                >
+                  수정 허용으로 전환
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

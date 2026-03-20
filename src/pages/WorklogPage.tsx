@@ -704,6 +704,11 @@ function siteCardActionHint(status: WorklogStatus) {
   return "날짜 수정은 버튼 클릭";
 }
 
+function siteCardActionHintResolved(status: WorklogStatus) {
+  if (status === "approved") return "완료 · 관리자만 수정 허용 가능";
+  return siteCardActionHint(status);
+}
+
 function toKoreanAffiliation(value: string) {
   const raw = (value || "").trim();
   if (!raw) return "미지정";
@@ -1258,7 +1263,8 @@ function WorkerWorklogPage() {
   const siteUnitUpdatedAt = siteDraft?.lastUpdatedAt || selectedSiteLogs[0]?.updatedAt || selectedSiteLogs[0]?.createdAt || "";
   const latestSiteLogUpdatedAt = selectedSiteLogs[0]?.updatedAt || selectedSiteLogs[0]?.createdAt || "";
   const isPendingSite = siteUnitStatus === "pending";
-  const canEditSite = siteUnitStatus !== "pending";
+  const isApprovedSite = siteUnitStatus === "approved";
+  const canEditSite = siteUnitStatus !== "pending" && siteUnitStatus !== "approved";
   const trimmedSiteMemo = siteMemo.trim();
   const nextActionGuide = useMemo(() => {
     if (siteUnitStatus === "pending") return "현재: 승인대기 | 다음: 통합요청 취소 후 수정";
@@ -1266,7 +1272,20 @@ function WorkerWorklogPage() {
     if (!siteReadyToSubmit) return `현재: 작성중 | 다음: ${sitePendingInline.replace(/ · /g, ".")}`;
     return "현재: 제출가능 | 다음: 통합승인요청";
   }, [sitePendingInline, siteReadyToSubmit, siteUnitStatus]);
-  const pulseRequest = !busy && !isPendingSite && siteReadyToSubmit;
+  const editBlockedMessage = isPendingSite
+    ? "승인대기 상태입니다. 하단 [통합요청 취소] 후 수정할 수 있습니다."
+    : isApprovedSite
+      ? "관리자 확정 완료 상태입니다. 관리자만 수정 가능 상태로 변경할 수 있습니다."
+      : "";
+  const resolvedNextActionGuide = isApprovedSite ? "현재: 완료 | 다음: 관리자에게 수정 요청" : nextActionGuide;
+  const inputStageGuide = isPendingSite
+    ? "입력 단계 안내: 승인대기중 · 하단 통합요청 취소 후 수정"
+    : isApprovedSite
+      ? "입력 단계 안내: 완료 · 관리자만 수정 허용 가능"
+      : siteReadyToSubmit
+        ? "입력 단계 안내: 완료 · 하단 통합승인요청"
+        : `입력 단계 안내: ${sitePendingInline} 입력`;
+  const pulseRequest = !busy && !isPendingSite && !isApprovedSite && siteReadyToSubmit;
   const pulseCancel = !busy && isPendingSite;
 
   useEffect(() => {
@@ -1675,8 +1694,14 @@ function WorkerWorklogPage() {
     return false;
   };
 
+  const ensureEditableSiteResolved = () => {
+    if (canEditSite) return true;
+    toast.error(editBlockedMessage);
+    return false;
+  };
+
   const openSheetWithGuard = (next: Exclude<SheetType, null>) => {
-    if (!ensureEditableSite()) return;
+    if (!ensureEditableSiteResolved()) return;
     setSheet(next);
   };
 
@@ -2063,7 +2088,7 @@ function WorkerWorklogPage() {
       label?: string;
     },
   ): Promise<boolean> => {
-    if (!ensureEditableSite()) return false;
+    if (!ensureEditableSiteResolved()) return false;
     if (!fileList || fileList.length === 0) return false;
 
     if (!hasSiteName || !hasDate) {
@@ -2100,7 +2125,7 @@ function WorkerWorklogPage() {
   };
 
   const triggerReplaceMedia = useCallback((target: ReplaceMediaTarget) => {
-    if (!ensureEditableSite()) return;
+    if (!ensureEditableSiteResolved()) return;
     setReplaceTarget(target);
     replaceInputRef.current?.click();
   }, [ensureEditableSite]);
@@ -2111,7 +2136,7 @@ function WorkerWorklogPage() {
         setReplaceTarget(null);
         return;
       }
-      if (!ensureEditableSite()) {
+      if (!ensureEditableSiteResolved()) {
         setReplaceTarget(null);
         return;
       }
@@ -2182,11 +2207,11 @@ function WorkerWorklogPage() {
         setReplaceTarget(null);
       }
     },
-    [editingLogId, ensureEditableSite, form.drawings, form.photos, form.siteName, form.siteValue, form.workDate, replaceTarget],
+    [editingLogId, ensureEditableSiteResolved, form.drawings, form.photos, form.siteName, form.siteValue, form.workDate, replaceTarget],
   );
 
   const loadSiteConstructionDrawings = useCallback(() => {
-    if (!ensureEditableSite()) return;
+    if (!ensureEditableSiteResolved()) return;
     if (!hasSiteName) {
       toast.error("현장을 먼저 선택해주세요.");
       return;
@@ -2236,7 +2261,7 @@ function WorkerWorklogPage() {
     }));
     setDrawingSheetOpen(false);
     toast.success(`현장 도면 ${additions.length}건을 불러왔습니다.`);
-  }, [ensureEditableSite, form.drawings, form.siteName, form.siteValue, hasSiteName]);
+  }, [ensureEditableSiteResolved, form.drawings, form.siteName, form.siteValue, hasSiteName]);
 
   const handleDrawingSheetUpload = useCallback(
     async (files: FileList | null) => {
@@ -2247,7 +2272,7 @@ function WorkerWorklogPage() {
   );
 
   const removeMediaItem = async (type: AttachmentType, index: number) => {
-    if (!ensureEditableSite()) return;
+    if (!ensureEditableSiteResolved()) return;
     const source = type === "photo" ? form.photos : form.drawings;
     const target = source[index];
     if (!target) return;
@@ -2271,7 +2296,7 @@ function WorkerWorklogPage() {
   };
 
   const togglePhotoItemStatus = (index: number) => {
-    if (!ensureEditableSite()) return;
+    if (!ensureEditableSiteResolved()) return;
     setForm((prev) => ({
       ...prev,
       photos: cloneMediaRows(
@@ -2287,7 +2312,7 @@ function WorkerWorklogPage() {
   };
 
   const toggleDrawingItemStatus = (index: number) => {
-    if (!ensureEditableSite()) return;
+    if (!ensureEditableSiteResolved()) return;
     setForm((prev) => ({
       ...prev,
       drawings: cloneMediaRows(
@@ -2302,7 +2327,7 @@ function WorkerWorklogPage() {
   };
 
   const openDrawingMarking = async (item: LegacyMedia, index: number) => {
-    if (!ensureEditableSite()) return;
+    if (!ensureEditableSiteResolved()) return;
     const previewKey = `drawing_${mediaItemKey(item, index)}`;
     const cachedPreview = previewMap[previewKey];
     if (cachedPreview) {
@@ -2363,7 +2388,7 @@ function WorkerWorklogPage() {
   );
 
   const addMaterialFromPreset = () => {
-    if (!ensureEditableSite()) return;
+    if (!ensureEditableSiteResolved()) return;
     const qty = Number(materialQty || 0);
     const name = (isMaterialDirect ? customMaterialValue : materialSelect).trim();
     if (!name || qty <= 0) {
@@ -2566,7 +2591,7 @@ function WorkerWorklogPage() {
                   receiptCount={card.receiptCount}
                 />
                 {card.status !== "draft" ? (
-                  <p className="mt-1 truncate text-[12px] font-semibold text-text-sub">{siteCardActionHint(card.status)}</p>
+                  <p className="mt-1 truncate text-[12px] font-semibold text-text-sub">{siteCardActionHintResolved(card.status)}</p>
                 ) : null}
               </div>
             )})
@@ -2600,7 +2625,7 @@ function WorkerWorklogPage() {
               </div>
 
               {trimmedSiteMemo ? <p className="mt-1 truncate text-tiny font-semibold text-text-sub">메모 {trimmedSiteMemo}</p> : null}
-              <p className="mt-1 truncate text-tiny font-semibold text-text-sub">{nextActionGuide}</p>
+              <p className="mt-1 truncate text-tiny font-semibold text-text-sub">{resolvedNextActionGuide}</p>
               <div className="mt-2.5">
                 <WorklogStatusProgress status={siteUnitStatus} />
               </div>
@@ -3114,26 +3139,26 @@ function WorkerWorklogPage() {
             <button
               type="button"
               onClick={handleUnifiedDraftSave}
-              disabled={busy || !hasSiteName || isPendingSite}
+              disabled={busy || !hasSiteName || isPendingSite || isApprovedSite}
               className={cn(
                 "h-[52px] rounded-xl text-sm-app font-bold disabled:opacity-50",
-                isPendingSite ? "bg-muted text-text-sub" : "bg-muted text-foreground",
+                isPendingSite || isApprovedSite ? "bg-muted text-text-sub" : "bg-muted text-foreground",
               )}
             >
               {isPendingSite ? "승인대기중" : busy ? "저장중..." : "통합 임시저장"}
             </button>
             <button
               type="button"
-              onClick={isPendingSite ? handleUnifiedCancelRequest : handleUnifiedRequest}
-              disabled={isPendingSite ? busy || !hasSiteName : busy || !siteReadyToSubmit}
+              onClick={isPendingSite ? handleUnifiedCancelRequest : isApprovedSite ? undefined : handleUnifiedRequest}
+              disabled={isApprovedSite ? true : isPendingSite ? busy || !hasSiteName : busy || !siteReadyToSubmit}
               className={cn(
                 "h-[52px] rounded-xl text-sm-app font-bold disabled:opacity-50",
-                isPendingSite ? "bg-red-600 text-white" : "bg-header-navy text-header-navy-foreground",
+                isPendingSite ? "bg-red-600 text-white" : isApprovedSite ? "bg-muted text-text-sub" : "bg-header-navy text-header-navy-foreground",
                 (pulseRequest || pulseCancel) && "animate-pulse",
               )}
             >
               <span className="inline-flex items-center gap-1">
-                {isPendingSite ? <X className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+                {isPendingSite ? <X className="h-4 w-4" /> : isApprovedSite ? <CheckCircle2 className="h-4 w-4" /> : <Send className="h-4 w-4" />}
                 {isPendingSite ? "통합요청 취소" : "통합승인요청"}
               </span>
             </button>

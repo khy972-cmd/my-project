@@ -98,6 +98,7 @@ function WorkerOutputPage({ isAdmin }: { isAdmin: boolean }) {
   const personalWorklogs = useMemo(
     () =>
       worklogs
+        .filter((worklog) => !user?.id || worklog.createdBy === user.id)
         .map((worklog) => {
           const manpowerRows = Array.isArray(worklog.manpower) ? worklog.manpower : [];
           const totalHours = manpowerRows.reduce((sum, item) => sum + Number(item.workHours || 0), 0);
@@ -105,7 +106,7 @@ function WorkerOutputPage({ isAdmin }: { isAdmin: boolean }) {
             normalizedWorkerNames.has(normalizeSiteSearch(String(item.worker || ""))),
           );
           const matchedHours = matchedRows.reduce((sum, item) => sum + Number(item.workHours || 0), 0);
-          const effectiveHours = matchedHours > 0 ? matchedHours : user?.id && worklog.createdBy === user.id ? totalHours : 0;
+          const effectiveHours = matchedHours > 0 ? matchedHours : totalHours;
           const resolvedSiteName = resolveOperationalSiteName(worklog.siteValue || "", worklog.siteName || "", siteLookup);
 
           if (effectiveHours <= 0 || !resolvedSiteName) return null;

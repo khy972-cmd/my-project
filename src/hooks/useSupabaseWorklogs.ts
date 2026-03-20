@@ -444,20 +444,58 @@ async function replaceWorklogDetails(worklogId: string, entry: WorklogMutationIn
   await insertWorklogDetails(worklogId, entry);
 }
 
+async function hasPrivilegedWorklogAccess(userId: string) {
+  const { data: roleRows, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  if (!error) {
+    return (roleRows ?? []).some((row) => {
+      const role = normalizeAppRole(row.role);
+      return role === "admin" || role === "manager";
+    });
+  }
+
+  const [{ data: isAdmin }, { data: isManager }] = await Promise.all([
+    supabase.rpc("has_role", { _role: "admin", _user_id: userId }),
+    supabase.rpc("has_role", { _role: "manager", _user_id: userId }),
+  ]);
+  return !!isAdmin || !!isManager;
+}
+
+async function getWorklogAccessTarget(worklogId: string, userId: string) {
+  const { data, error } = await supabase
+    .from("worklogs")
+    .select("id, created_by, status")
+    .eq("id", worklogId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data?.id) throw new Error("작업일지를 찾을 수 없습니다.");
+
+  const privileged = await hasPrivilegedWorklogAccess(userId);
+  const isOwner = data.created_by === userId;
+  const currentStatus = normalizeWorklogStatus(data.status);
+
+  if (!privileged && !isOwner) {
+    throw new Error("본인 작업일지만 수정할 수 있습니다.");
+  }
+
+  return { currentStatus, isOwner, privileged };
+}
+
 export function useWorklogs() {
   const { user, isTestMode } = useAuth();
   const queryClient = useQueryClient();
   const isAuthenticated = !!user;
 
   const query = useQuery({
-    queryKey: ["worklogs"],
+    queryKey: ["worklogs", user?.id ?? "anon"],
     queryFn: async (): Promise<WorklogEntry[]> => {
       if (!isAuthenticated) {
         migrateOldWorklogs();
         return getAllWorklogs().map((entry) => ({ ...entry, status: normalizeWorklogStatus(entry.status) }));
       }
 
-      const { data, error } = await supabase
+      const canViewAll = await hasPrivilegedWorklogAccess(user.id);
+      let query = supabase
         .from("worklogs")
         .select(
           `
@@ -468,6 +506,12 @@ export function useWorklogs() {
         `,
         )
         .order("work_date", { ascending: false });
+
+      if (!canViewAll) {
+        query = query.eq("created_by", user.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -546,9 +590,10 @@ export function useSaveWorklog() {
 
       const { data: sameDayRows, error: sameDayError } = await supabase
         .from("worklogs")
-        .select("id, version")
+        .select("id, version, status")
         .eq("site_id", siteId)
         .eq("work_date", entry.workDate)
+        .eq("created_by", user.id)
         .order("created_at", { ascending: false })
         .limit(1);
 
@@ -558,6 +603,11 @@ export function useSaveWorklog() {
       const normalizedStatus = normalizeWorklogStatus(entry.status);
 
       if (existing?.id) {
+        const canManageLocked = await hasPrivilegedWorklogAccess(user.id);
+        if (!canManageLocked && normalizeWorklogStatus(existing.status) === "approved") {
+          throw new Error("관리자 확정 후에는 수정할 수 없습니다.");
+        }
+
         const { data: updatedWorklog, error: updateError } = await supabase
           .from("worklogs")
           .update({
@@ -656,6 +706,11 @@ export function useUpdateWorklog() {
         });
       }
 
+      const access = await getWorklogAccessTarget(id, user.id);
+      if (!access.privileged && access.currentStatus === "approved") {
+        throw new Error("관리자 확정 후에는 수정할 수 없습니다.");
+      }
+
       const prevMeta = getAttachmentMeta(id);
       const nextMeta = {
         photos: incomingMeta.photos.length > 0 ? incomingMeta.photos : prevMeta.photos,
@@ -706,6 +761,14 @@ export function useUpdateWorklogStatus() {
         return;
       }
 
+      const access = await getWorklogAccessTarget(id, user.id);
+      if (!access.privileged && access.currentStatus === "approved") {
+        throw new Error("관리자 확정 후에는 수정할 수 없습니다.");
+      }
+      if (!access.privileged && (normalizedStatus === "approved" || normalizedStatus === "rejected")) {
+        throw new Error("승인 또는 반려 처리는 관리자만 가능합니다.");
+      }
+
       const { error } = await supabase
         .from("worklogs")
         .update({ status: normalizedStatus, updated_at: new Date().toISOString() })
@@ -728,6 +791,11 @@ export function useDeleteWorklog() {
         localDeleteWorklog(id);
         await removeAttachmentMeta(id);
         return;
+      }
+
+      const access = await getWorklogAccessTarget(id, user.id);
+      if (!access.privileged && access.currentStatus === "approved") {
+        throw new Error("관리자 확정 후에는 삭제할 수 없습니다.");
       }
 
       await supabase.from("worklog_manpower").delete().eq("worklog_id", id);
