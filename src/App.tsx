@@ -16,6 +16,7 @@ const RequestPage = lazy(() => import("@/pages/RequestPage"));
 const RequestExternalPage = lazy(() => import("@/pages/RequestExternalPage"));
 const AuthPage = lazy(() => import("@/pages/AuthPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
+const PendingApprovalPage = lazy(() => import("@/pages/PendingApprovalPage"));
 import NotFound from "@/pages/NotFound";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
@@ -36,6 +37,14 @@ const App = () => (
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route
+                  path="/pending-approval"
+                  element={
+                    <ProtectedRoute allowPending>
+                      <PendingApprovalPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/admin"
                   element={
                     <ProtectedRoute allowedRoles={["admin", "manager"]} redirectTo="/">
@@ -46,7 +55,13 @@ const App = () => (
                 <Route path="/home" element={<Navigate to="/" replace />} />
                 <Route path="/home/*" element={<Navigate to="/" replace />} />
                 <Route path="/home.html" element={<Navigate to="/" replace />} />
-                <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                >
                   <Route path="/" element={<HomePage />} />
                   <Route path="/site" element={<SitePage />} />
                   <Route path="/worklog" element={<WorklogPage />} />

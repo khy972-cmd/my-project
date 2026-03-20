@@ -16,12 +16,17 @@ const RoleContext = createContext<RoleContextType>({
 export const useRole = () => useContext(RoleContext);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const { user, isTestMode, testRole } = useAuth();
+  const { user, initialized, isTestMode, testRole } = useAuth();
   const [role, setRole] = useState<AppRole | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
+
+    if (!initialized) {
+      setRoleLoading(true);
+      return;
+    }
 
     if (isTestMode) {
       setRole(testRole);
@@ -50,7 +55,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, [user?.id, isTestMode, testRole]);
+  }, [initialized, isTestMode, testRole, user?.id]);
 
   const value = useMemo(
     () => ({

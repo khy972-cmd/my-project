@@ -1,12 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
-import { type AppRole, ROLE_PRIORITY, normalizeAppRole } from "@/lib/roles";
+import { type AppRole, ROLE_PRIORITY, coerceAppRole } from "@/lib/roles";
 
-const userRoleCache = new Map<string, AppRole>();
-const userRoleRequestCache = new Map<string, Promise<AppRole>>();
+const userRoleCache = new Map<string, AppRole | null>();
+const userRoleRequestCache = new Map<string, Promise<AppRole | null>>();
 
-export async function getUserRole(userId: string): Promise<AppRole> {
+export async function getUserRole(userId: string): Promise<AppRole | null> {
   const cachedRole = userRoleCache.get(userId);
-  if (cachedRole) return cachedRole;
+  if (cachedRole !== undefined) return cachedRole;
 
   const inFlightRequest = userRoleRequestCache.get(userId);
   if (inFlightRequest) return inFlightRequest;
@@ -26,17 +26,18 @@ export async function getUserRole(userId: string): Promise<AppRole> {
 
       const resolvedRole =
         (data || [])
-          .map((row) => normalizeAppRole(row.role))
-          .sort((a, b) => ROLE_PRIORITY[b] - ROLE_PRIORITY[a])[0] ?? "worker";
+          .map((row) => coerceAppRole(row.role))
+          .filter((role): role is AppRole => Boolean(role))
+          .sort((a, b) => ROLE_PRIORITY[b] - ROLE_PRIORITY[a])[0] ?? null;
 
       userRoleCache.set(userId, resolvedRole);
       return resolvedRole;
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.warn("[user-role] fallback to worker", error);
+        console.warn("[user-role] no approved role", error);
       }
-      userRoleCache.set(userId, "worker");
-      return "worker";
+      userRoleCache.set(userId, null);
+      return null;
     } finally {
       userRoleRequestCache.delete(userId);
     }

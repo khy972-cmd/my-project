@@ -11,6 +11,7 @@ export function useUserRole() {
     isManager: canonicalRole === "manager",
     isPartner: canonicalRole === "partner",
     isWorker: canonicalRole === "worker",
+    isPending: !roleLoading && !canonicalRole,
     loading: roleLoading,
   };
 }

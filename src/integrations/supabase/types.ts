@@ -286,6 +286,71 @@ export type Database = {
         }
         Relationships: []
       }
+      signup_requests: {
+        Row: {
+          admin_note: string | null
+          assigned_org_id: string | null
+          created_at: string
+          email: string
+          id: string
+          job_title: string | null
+          name: string
+          phone: string | null
+          request_type: string
+          requested_company_name: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          assigned_org_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          job_title?: string | null
+          name: string
+          phone?: string | null
+          request_type: string
+          requested_company_name?: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          assigned_org_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          job_title?: string | null
+          name?: string
+          phone?: string | null
+          request_type?: string
+          requested_company_name?: string | null
+          requested_role?: Database["public"]["Enums"]["app_role"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signup_requests_assigned_org_id_fkey"
+            columns: ["assigned_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_deployments: {
         Row: {
           affiliation: string | null
@@ -1095,8 +1160,62 @@ export type Database = {
         Args: { _site_id: string; _user_id: string }
         Returns: boolean
       }
+      can_access_site: {
+        Args: { _site_id: string; _user_id?: string }
+        Returns: boolean
+      }
       get_punch_group_site_id: { Args: { _group_id: string }; Returns: string }
       get_worklog_site_id: { Args: { _worklog_id: string }; Returns: string }
+      admin_approve_signup_request: {
+        Args: {
+          _request_id: string
+          _assigned_role?: Database["public"]["Enums"]["app_role"] | null
+          _assigned_org_id?: string | null
+          _admin_note?: string | null
+        }
+        Returns: {
+          admin_note: string | null
+          assigned_org_id: string | null
+          created_at: string
+          email: string
+          id: string
+          job_title: string | null
+          name: string
+          phone: string | null
+          request_type: string
+          requested_company_name: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+      }
+      admin_reject_signup_request: {
+        Args: {
+          _request_id: string
+          _admin_note?: string | null
+        }
+        Returns: {
+          admin_note: string | null
+          assigned_org_id: string | null
+          created_at: string
+          email: string
+          id: string
+          job_title: string | null
+          name: string
+          phone: string | null
+          request_type: string
+          requested_company_name: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

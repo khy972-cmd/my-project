@@ -8,26 +8,31 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: AppRole[];
   redirectTo?: string;
+  allowPending?: boolean;
 }
 
 export default function ProtectedRoute({
   children,
   allowedRoles,
   redirectTo = "/",
+  allowPending = false,
 }: ProtectedRouteProps) {
   const { session, initialized, isTestMode } = useAuth();
   const { role, loading: roleLoading } = useUserRole();
   const location = useLocation();
   const hasRoleRequirement = Boolean(allowedRoles && allowedRoles.length > 0);
-  const waitingForRole = hasRoleRequirement && !!session && !role && !roleLoading;
 
-  if (!initialized || (hasRoleRequirement && roleLoading) || waitingForRole) {
+  if (!initialized || (!!session && !isTestMode && roleLoading)) {
     return <LoadingScreen />;
   }
 
   if (!session && !isTestMode) {
     const authTarget = `/auth${location.search}${location.hash}`;
     return <Navigate to={authTarget} replace state={{ from: location }} />;
+  }
+
+  if (!!session && !isTestMode && !role && !allowPending) {
+    return <Navigate to="/pending-approval" replace />;
   }
 
   if (hasRoleRequirement) {

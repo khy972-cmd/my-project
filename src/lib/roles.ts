@@ -21,8 +21,12 @@ export function isAppRole(value: unknown): value is AppRole {
   return value === "admin" || value === "manager" || value === "partner" || value === "worker";
 }
 
-export function normalizeAppRole(value: unknown): AppRole {
+export function coerceAppRole(value: unknown): AppRole | null {
   if (value === "site_manager") return "manager";
   if (isAppRole(value)) return value;
-  return "worker";
+  return null;
+}
+
+export function normalizeAppRole(value: unknown): AppRole {
+  return coerceAppRole(value) ?? "worker";
 }
