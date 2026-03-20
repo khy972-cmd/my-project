@@ -19928,6 +19928,7 @@ function Fk() {
     [w, m] = y.useState(''),
     [h, v] = y.useState(!1),
     [workerQuery, setWorkerQuery] = y.useState(''),
+    [workerDropdownOpen, setWorkerDropdownOpen] = y.useState(!1),
     [sheetExpanded, setSheetExpanded] = y.useState(!0),
     k = y.useMemo(() => fy(), []),
     N = y.useMemo(() => b.map(C => k.find(_ => _.value === C)).filter(C => !!C), [b, k]),
@@ -19948,6 +19949,10 @@ function Fk() {
       )
       return C.length > 0 ? C : py
     }, [a.worker, e.manpowerList]),
+    workerMatches = y.useMemo(() => {
+      const C = (workerQuery || a.worker || '').trim().toLowerCase()
+      return (C ? I.filter(_ => _.toLowerCase().includes(C)) : I).slice(0, 10)
+    }, [I, a.worker, workerQuery]),
     resolveChatFieldValue = (C, _) => (C === '기타' ? (_ || '').trim() : (C || '').trim()),
     D = o === 1 && h && w.trim().length > 0,
     Q = y.useCallback((C, _, B) => {
@@ -19996,7 +20001,7 @@ function Fk() {
     },
     workerSubmit = () => {
       const C = (a.worker || workerQuery).trim()
-      C ? re(C) : U('작업자 이름을 선택하거나 직접 입력해주세요.', 120)
+      C ? (setWorkerDropdownOpen(!1), re(C)) : U('작업자 이름을 선택하거나 직접 입력해주세요.', 120)
     },
     syncChatWorkSet = C => {
       const _ = resolveChatFieldValue(C.member, C.customMember),
@@ -20029,6 +20034,26 @@ function Fk() {
     updateChatCustomValue = (C, _) => {
       syncChatWorkSet({ ...g, [C]: _ })
     },
+    openEditStep = y.useCallback(
+      C => {
+        if (C === 1) {
+          m((a.site || '').trim())
+          v(!!(a.site || '').trim())
+        } else if (C === 3) {
+          setWorkerQuery((a.worker || e.manpowerList.find(_ => (_.worker || '').trim())?.worker || I[0] || '').trim())
+          setWorkerDropdownOpen(!1)
+        } else if (C === 4) {
+          p(_ => ({
+            ..._,
+            member: _.member || a.member || '',
+            process: _.process || a.process || '',
+            type: _.type || a.type || '',
+          }))
+        }
+        ;(setSheetExpanded(!0), s(C))
+      },
+      [I, a.member, a.process, a.site, a.type, a.worker, e.manpowerList]
+    ),
     ee = y.useCallback(() => {
       n(C => {
         const _ = { ...C }
@@ -20164,7 +20189,7 @@ function Fk() {
                   C.isUser && C.editStep
                     ? c.jsx('button', {
                         type: 'button',
-                        onClick: () => s(C.editStep),
+                        onClick: () => openEditStep(C.editStep),
                         className:
                           'inline-block max-w-[85%] rounded-[20px] bg-primary px-5 py-4 text-left text-base leading-relaxed text-primary-foreground transition-opacity hover:opacity-90',
                         style: { whiteSpace: 'pre-line' },
@@ -20320,13 +20345,13 @@ function Fk() {
                   className: 'mb-2 block text-[15px] font-bold text-muted-foreground',
                   children: '작업 날짜를 선택해주세요',
                 }),
-                c.jsx('input', {
-                  type: 'date',
-                  defaultValue: new Date().toISOString().slice(0, 10),
-                  onChange: C => u(_ => ({ ..._, date: C.target.value })),
-                  className:
-                    'mb-4 h-[54px] w-full rounded-xl border border-border bg-card px-4 text-[17px] font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
-                }),
+                    c.jsx('input', {
+                      type: 'date',
+                      value: a.date || new Date().toISOString().slice(0, 10),
+                      onChange: C => u(_ => ({ ..._, date: C.target.value })),
+                      className:
+                        'mb-4 h-[54px] w-full rounded-xl border border-border bg-card px-4 text-[17px] font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
+                    }),
                 c.jsx('button', {
                   onClick: $,
                   className:
@@ -20346,30 +20371,69 @@ function Fk() {
                       className: 'mb-2 block text-[15px] font-bold text-muted-foreground',
                       children: '작업자를 선택해주세요',
                     }),
-                    c.jsx('input', {
-                      type: 'text',
-                      list: 'worklog-helper-worker-options',
-                      value: workerQuery || a.worker || '',
-                      onChange: C => {
-                        const _ = C.target.value
-                        ;(setWorkerQuery(_), u(B => ({ ...B, worker: _ })))
-                      },
-                      onKeyDown: C => {
-                        C.key === 'Enter' && (C.preventDefault(), workerSubmit())
-                      },
-                      placeholder: '기본값은 접속자 본인입니다',
-                      className:
-                        'h-[50px] w-full rounded-xl border border-border bg-card px-4 text-[15px] font-medium outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20',
-                    }),
-                    c.jsx('datalist', {
-                      id: 'worklog-helper-worker-options',
-                      children: I.map(C => c.jsx('option', { value: C, children: C }, C)),
+                    c.jsxs('div', {
+                      className: 'relative',
+                      children: [
+                        c.jsx('input', {
+                          type: 'text',
+                          value: workerQuery || a.worker || '',
+                          onChange: C => {
+                            const _ = C.target.value
+                            ;(setWorkerQuery(_), setWorkerDropdownOpen(!0), u(B => ({ ...B, worker: _ })))
+                          },
+                          onFocus: () => setWorkerDropdownOpen(!0),
+                          onBlur: () => {
+                            window.setTimeout(() => setWorkerDropdownOpen(!1), 120)
+                          },
+                          onKeyDown: C => {
+                            C.key === 'Enter' && (C.preventDefault(), workerSubmit())
+                          },
+                          placeholder: '기본값은 접속자 본인입니다',
+                          className:
+                            'h-[50px] w-full rounded-xl border border-border bg-card px-4 pr-10 text-[15px] font-medium outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20',
+                        }),
+                        c.jsx('button', {
+                          type: 'button',
+                          onMouseDown: C => {
+                            C.preventDefault()
+                            setWorkerDropdownOpen(_ => !_)
+                          },
+                          className:
+                            'absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent',
+                          children: '⌄',
+                        }),
+                        workerDropdownOpen &&
+                          c.jsx('div', {
+                            className:
+                              'absolute left-0 right-0 top-[calc(100%+8px)] z-20 max-h-56 overflow-auto rounded-xl border border-border bg-card p-1.5 shadow-xl',
+                            children:
+                              workerMatches.length > 0
+                                ? workerMatches.map(C =>
+                                    c.jsx(
+                                      'button',
+                                      {
+                                        type: 'button',
+                                        onMouseDown: _ => {
+                                          ;(_.preventDefault(), setWorkerDropdownOpen(!1), re(C))
+                                        },
+                                        className: `mb-1 flex h-[46px] w-full items-center rounded-lg px-3 text-left text-[14px] font-semibold transition-all last:mb-0 ${((a.worker || '').trim() || (workerQuery || '').trim()) === C ? 'bg-primary-bg text-primary' : 'text-foreground hover:bg-primary-bg'}`,
+                                        children: C,
+                                      },
+                                      C
+                                    )
+                                  )
+                                : c.jsx('div', {
+                                    className: 'px-3 py-3 text-sm font-medium text-muted-foreground',
+                                    children: '검색 결과가 없으면 현재 입력값으로 직접 추가할 수 있습니다',
+                                  }),
+                          }),
+                      ],
                     }),
                   ],
                 }),
                 c.jsx('div', {
                   className: 'mb-3 text-center text-[13px] text-muted-foreground',
-                  children: '기존 작업자 목록과 연동되며, 목록에 없으면 직접 입력할 수 있습니다',
+                  children: '기존 작업자 데이터를 그대로 검색하며, 목록에 없으면 직접 입력할 수 있습니다',
                 }),
                 c.jsx('button', {
                   onClick: workerSubmit,
