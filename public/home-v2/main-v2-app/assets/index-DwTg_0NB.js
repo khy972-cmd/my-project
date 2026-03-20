@@ -20204,15 +20204,14 @@ function Fk() {
         children: [
           c.jsx('div', {
             className: 'sticky top-0 z-10 -mt-2 mb-3 flex justify-center bg-card pb-3',
-            children: c.jsxs('button', {
+            children: c.jsx('button', {
               type: 'button',
               onClick: () => setSheetExpanded(C => !C),
+              'aria-label': sheetExpanded ? '입력창 접기' : '입력창 펼치기',
+              title: sheetExpanded ? '입력창 접기' : '입력창 펼치기',
               className:
-                'flex items-center gap-2 rounded-full border border-border bg-bg-input px-3 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-accent',
-              children: [
-                c.jsx('span', { className: 'block h-1.5 w-10 rounded-full bg-border' }),
-                sheetExpanded ? '입력창 접기' : '입력창 펼치기',
-              ],
+                'flex h-8 w-full items-center justify-center rounded-full bg-card transition-colors hover:bg-accent/40',
+              children: c.jsx('span', { className: 'block h-1.5 w-10 rounded-full bg-border' }),
             }),
           }),
           sheetExpanded &&
