@@ -17059,7 +17059,11 @@ function pk({ children: e }) {
       }))
     }, []),
     l = y.useCallback(m => {
-      n(h => ({ ...h, manpowerList: h.manpowerList.filter(v => v.id !== m) }))
+      n(h => {
+        const v = h.manpowerList.filter(k => k.id !== m),
+          k = v.some(N => (N.worker || '').trim())
+        return k ? { ...h, manpowerList: v } : (we.info('작업자는 최소 1명 이상 유지해야 합니다'), h)
+      })
     }, []),
     a = y.useCallback((m, h) => {
       n(v => ({
