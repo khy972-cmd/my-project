@@ -35,10 +35,27 @@ export default function ResetPasswordPage() {
     }
 
     if (isRecoveryFlowUrl() || hasAuthCodeInUrl()) {
-      toast.error("유효하지 않거나 만료된 비밀번호 재설정 링크입니다.");
-      stripAuthCallbackParamsFromUrl();
-      navigate("/auth", { replace: true });
-      return;
+      let cancelled = false;
+      const timeoutId = window.setTimeout(() => {
+        void supabase.auth.getSession().then(({ data }) => {
+          if (cancelled) return;
+
+          if (data.session) {
+            setLinkReady(true);
+            stripAuthCallbackParamsFromUrl();
+            return;
+          }
+
+          toast.error("유효하지 않거나 만료된 비밀번호 재설정 링크입니다.");
+          stripAuthCallbackParamsFromUrl();
+          navigate("/auth", { replace: true });
+        });
+      }, 1500);
+
+      return () => {
+        cancelled = true;
+        window.clearTimeout(timeoutId);
+      };
     }
 
     toast.error("유효하지 않은 비밀번호 재설정 링크입니다.");
@@ -129,7 +146,7 @@ export default function ResetPasswordPage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
-                placeholder="비밀번호를 다시 입력해 주세요."
+                placeholder="비밀번호를 다시 입력해 주세요"
                 className="w-full h-12 rounded-lg border border-border px-4 text-base bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
               />
             </div>
