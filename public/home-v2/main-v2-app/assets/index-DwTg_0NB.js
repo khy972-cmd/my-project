@@ -20172,8 +20172,26 @@ function Fk() {
                         children: C.text,
                       })
                     : c.jsx('div', {
-                        className: `inline-block max-w-[85%] rounded-[20px] px-5 py-4 text-base leading-relaxed ${C.isUser ? 'bg-primary text-primary-foreground' : 'border border-border bg-card text-foreground shadow-sm'}`,
-                        style: { whiteSpace: 'pre-line' },
+                        role:
+                          !C.isUser &&
+                          typeof C.text == 'string' &&
+                          C.text.includes('*필수값은 입력해야 다음 단계로 진행됩니다')
+                            ? 'alert'
+                            : void 0,
+                        className: `inline-block max-w-[85%] rounded-[20px] px-5 py-4 text-base leading-relaxed ${C.isUser ? 'bg-primary text-primary-foreground' : !C.isUser &&
+                          typeof C.text == 'string' &&
+                          C.text.includes('*필수값은 입력해야 다음 단계로 진행됩니다')
+                          ? 'border border-destructive/40 bg-destructive/5 text-destructive shadow-[0_0_0_3px_rgba(239,68,68,0.08)]'
+                          : 'border border-border bg-card text-foreground shadow-sm'}`,
+                        style: {
+                          whiteSpace: 'pre-line',
+                          animation:
+                            !C.isUser &&
+                            typeof C.text == 'string' &&
+                            C.text.includes('*필수값은 입력해야 다음 단계로 진행됩니다')
+                              ? 'requiredAlert 0.45s ease-out'
+                              : void 0,
+                        },
                         children: C.text,
                       }),
               },
@@ -20521,6 +20539,11 @@ function Fk() {
         @keyframes slideIn {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes requiredAlert {
+          0% { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(239,68,68,0.18); }
+          70% { transform: scale(1.01); box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,0); }
         }
       `,
       }),
