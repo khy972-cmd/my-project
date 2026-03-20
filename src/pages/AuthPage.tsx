@@ -283,9 +283,9 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] px-4 py-8">
-      <div className="w-full max-w-[440px]">
-        <div className="w-full rounded-[28px] border border-slate-200 bg-white p-8 shadow-[0_18px_50px_rgba(15,23,42,0.08)] max-[640px]:rounded-[24px] max-[640px]:p-6">
+    <div className="flex min-h-screen items-center justify-center bg-white px-5 py-8">
+      <div className="w-full max-w-[420px]">
+        <div className="w-full bg-white">
           {!isSupabaseConfigured && (
             <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
               <p className="font-semibold">환경 설정이 필요합니다</p>
@@ -297,9 +297,6 @@ export default function AuthPage() {
             </div>
           )}
           <div className="mb-8 text-center">
-            <div className="mb-4 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[12px] font-semibold tracking-[0.08em] text-slate-500">
-              INOPNC ACCOUNT
-            </div>
             <div className="mb-3 flex items-center justify-center gap-3 max-[640px]:gap-2 max-[420px]:gap-1.5">
               <img
                 src={logoImg}
