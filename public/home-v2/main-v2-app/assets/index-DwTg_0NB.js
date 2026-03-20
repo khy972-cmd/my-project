@@ -17065,7 +17065,11 @@ function pk({ children: e }) {
       n(v => ({
         ...v,
         manpowerList: v.manpowerList.map(k =>
-          k.id === m ? { ...k, worker: h, isCustom: h === 'CUSTOM' } : k
+          k.id === m
+            ? h === '__custom__' || h === 'CUSTOM'
+              ? { ...k, worker: '', isCustom: !0 }
+              : { ...k, worker: h, isCustom: k.isCustom }
+            : k
         ),
       }))
     }, []),
@@ -17523,6 +17527,16 @@ function bk() {
                       className: 'truncate px-1 text-[17px] font-bold text-foreground',
                       children: s.worker,
                     })
+                  : s.isCustom
+                    ? c.jsx('input', {
+                        id: `manpower-worker-${s.id}`,
+                        type: 'text',
+                        value: s.worker,
+                        onChange: u => r(s.id, u.target.value),
+                        placeholder: '작업자 이름 직접입력',
+                        className:
+                          'h-[50px] w-full rounded-xl border border-border bg-card px-4 text-[15px] font-medium outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20',
+                      })
                   : c.jsxs('select', {
                       id: `manpower-worker-${s.id}`,
                       value: s.worker,
@@ -19914,6 +19928,7 @@ function Fk() {
     [w, m] = y.useState(''),
     [h, v] = y.useState(!1),
     [workerQuery, setWorkerQuery] = y.useState(''),
+    [sheetExpanded, setSheetExpanded] = y.useState(!0),
     k = y.useMemo(() => fy(), []),
     N = y.useMemo(() => b.map(C => k.find(_ => _.value === C)).filter(C => !!C), [b, k]),
     j = y.useMemo(() => (N.length > 0 ? N.slice(0, op) : k.slice(0, op)), [N, k]),
@@ -19927,13 +19942,12 @@ function Fk() {
     I = y.useMemo(() => {
       const C = Array.from(
         new Set(
-          e.manpowerList
-            .map(_ => _.worker.trim())
+          [((a.worker || '').trim()), ...e.manpowerList.map(_ => _.worker.trim()), ...py]
             .filter(_ => _ && _ !== '__custom__' && _ !== 'CUSTOM')
         )
       )
       return C.length > 0 ? C : py
-    }, [e.manpowerList]),
+    }, [a.worker, e.manpowerList]),
     workerMatches = y.useMemo(() => {
       const C = (workerQuery || a.worker || '').trim().toLowerCase()
       return (C ? I.filter(_ => _.toLowerCase().includes(C)) : I).slice(0, 9)
@@ -19992,22 +20006,19 @@ function Fk() {
       const _ = resolveChatFieldValue(C.member, C.customMember),
         B = resolveChatFieldValue(C.process, C.customProcess),
         H = resolveChatFieldValue(C.type, C.customType),
-        Z = C.type === '기타' && !H
+        Z = C.type === '기타' && !H,
+        $e = [!_ ? '부재명' : '', !B ? '작업공정' : ''].filter(Boolean).join(', ')
       if ((p(C), _ && B && !Z)) {
-        const $e = H ? ` / 유형:${H}` : ''
-        ;(Q(`부재:${_} / 공정:${B}${$e}`, !0, 4),
-          u(re => ({ ...re, member: _, process: B, type: H })),
+        const re = H ? ` / 유형:${H}` : ''
+        ;(Q(`부재:${_} / 공정:${B}${re}`, !0, 4),
+          u(oe => ({ ...oe, member: _, process: B, type: H })),
           U('작업일지를 저장할까요?'),
           s(5))
         return
       }
-      _ && !B
-        ? U('이어서 작업공정을 선택하거나 직접 입력해주세요.', 120)
-        : !_ && B
-          ? U('이어서 부재명을 선택하거나 직접 입력해주세요.', 120)
-          : _ && B && Z
-            ? U('작업유형을 직접 입력하거나 다시 선택해주세요.', 120)
-          : !_ && !B && U('부재명과 작업공정은 필수입니다.', 120)
+      _ && B && Z
+        ? U('작업유형을 기타로 선택한 경우 직접 입력까지 완료해주세요.', 120)
+        : U(`*필수값은 입력해야 다음 단계로 진행됩니다.\n누락 항목: ${$e}`, 120)
     },
     K = (C, _) => {
       const B = {
@@ -20112,6 +20123,9 @@ function Fk() {
       },
       [ee, t]
     )
+  y.useEffect(() => {
+    setSheetExpanded(!0)
+  }, [o])
   return c.jsxs('div', {
     className: 'fixed inset-0 z-[100] flex flex-col bg-background',
     children: [
@@ -20189,9 +20203,22 @@ function Fk() {
         ],
       }),
       c.jsxs('div', {
-        className: `border-t border-border bg-card p-5 overflow-y-auto ${D ? 'max-h-[72vh]' : 'max-h-[56vh]'}`,
+        className: `border-t border-border bg-card p-5 overflow-y-auto ${sheetExpanded ? (D ? 'max-h-[72vh]' : 'max-h-[56vh]') : 'max-h-[96px]'}`,
         style: { borderRadius: '20px 20px 0 0', boxShadow: '0 -4px 20px rgba(0,0,0,0.05)' },
         children: [
+          c.jsx('div', {
+            className: 'sticky top-0 z-10 -mt-2 mb-3 flex justify-center bg-card pb-3',
+            children: c.jsxs('button', {
+              type: 'button',
+              onClick: () => setSheetExpanded(C => !C),
+              className:
+                'flex items-center gap-2 rounded-full border border-border bg-bg-input px-3 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-accent',
+              children: [
+                c.jsx('span', { className: 'block h-1.5 w-10 rounded-full bg-border' }),
+                sheetExpanded ? '입력창 접기' : '입력창 펼치기',
+              ],
+            }),
+          }),
           o === 1 &&
             c.jsxs('div', {
               className: 'flex flex-col gap-3',
@@ -20355,6 +20382,10 @@ function Fk() {
                     'h-[54px] w-full rounded-xl bg-primary text-[17px] font-bold text-primary-foreground shadow-sm transition-all hover:opacity-90',
                   children: '이 작업자로 진행하기',
                 }),
+                c.jsx('div', {
+                  className: 'mt-2 text-center text-[13px] text-muted-foreground',
+                  children: '직접 입력한 작업자도 저장 시 홈 공수 목록에 반영됩니다',
+                }),
               ],
             }),
           o === 4 &&
@@ -20464,7 +20495,7 @@ function Fk() {
                 }),
                 c.jsx('div', {
                   className: 'mt-2 text-center text-[13px] text-muted-foreground',
-                  children: '부재명/작업공정은 필수이며, 기타 선택 시 직접 입력할 수 있습니다',
+                  children: '*필수값은 입력해야 다음 단계로 진행됩니다',
                 }),
               ],
             }),

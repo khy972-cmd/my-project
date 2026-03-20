@@ -297,7 +297,7 @@ export function WorkerHomePageLegacy() {
     setManpower(prev => prev.map(m => {
       if (m.id !== id) return m;
       if (value === "__custom__") return { ...m, isCustom: true, worker: "" };
-      return { ...m, worker: value, isCustom: false };
+      return { ...m, worker: value, isCustom: m.isCustom };
     }));
   };
 
