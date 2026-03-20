@@ -283,9 +283,9 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-5 py-5">
-      <div className="w-full max-w-app">
-        <div className="bg-card rounded-xl shadow-md p-8 max-[640px]:p-6 w-full">
+    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] px-4 py-8">
+      <div className="w-full max-w-[440px]">
+        <div className="w-full rounded-[28px] border border-slate-200 bg-white p-8 shadow-[0_18px_50px_rgba(15,23,42,0.08)] max-[640px]:rounded-[24px] max-[640px]:p-6">
           {!isSupabaseConfigured && (
             <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
               <p className="font-semibold">환경 설정이 필요합니다</p>
@@ -296,7 +296,10 @@ export default function AuthPage() {
               </p>
             </div>
           )}
-          <div className="text-center mb-8">
+          <div className="mb-8 text-center">
+            <div className="mb-4 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[12px] font-semibold tracking-[0.08em] text-slate-500">
+              INOPNC ACCOUNT
+            </div>
             <div className="mb-3 flex items-center justify-center gap-3 max-[640px]:gap-2 max-[420px]:gap-1.5">
               <img
                 src={logoImg}
@@ -307,7 +310,7 @@ export default function AuthPage() {
                 {showForgot ? "비밀번호 찾기" : isLogin ? "로그인" : "회원가입"}
               </h1>
             </div>
-            <p className="text-[14px] text-text-sub">
+            <p className="text-[14px] leading-6 text-slate-500">
               {showForgot
                 ? "가입한 이메일을 입력하세요."
                 : isLogin
@@ -327,7 +330,7 @@ export default function AuthPage() {
                     <select
                       value={signupAffiliation}
                       onChange={(event) => setSignupAffiliation(event.target.value as SignupAffiliation)}
-                      className="h-12 w-full appearance-none rounded-lg border border-border bg-card px-4 pr-12 text-[16px] text-foreground outline-none transition-colors focus:border-primary max-[640px]:h-11"
+                      className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-12 text-[16px] text-foreground outline-none transition-all focus:border-slate-300 focus:ring-4 focus:ring-slate-100 max-[640px]:h-11"
                     >
                       {AFFILIATION_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -351,7 +354,7 @@ export default function AuthPage() {
                         value={partnerCompany}
                         onChange={(event) => setPartnerCompany(event.target.value)}
                         placeholder="파트너 회사명을 입력하세요"
-                        className="h-12 rounded-lg border border-border px-4 text-[16px] bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary max-[640px]:h-11"
+                        className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-[16px] text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-slate-300 focus:ring-4 focus:ring-slate-100 max-[640px]:h-11"
                       />
                       <datalist id={PARTNER_DATALIST_ID}>
                         {partnerSuggestions.map((company) => (
@@ -368,7 +371,7 @@ export default function AuthPage() {
                         value={jobTitle}
                         onChange={(event) => setJobTitle(event.target.value)}
                         placeholder="예: 소장 / 기사 / 대표"
-                        className="h-12 rounded-lg border border-border px-4 text-[16px] bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary max-[640px]:h-11"
+                        className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-[16px] text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-slate-300 focus:ring-4 focus:ring-slate-100 max-[640px]:h-11"
                       />
                     </div>
                   </>
@@ -383,7 +386,7 @@ export default function AuthPage() {
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     placeholder="이름을 입력하세요"
-                    className="h-12 rounded-lg border border-border px-4 text-[16px] bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary max-[640px]:h-11"
+                    className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-[16px] text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-slate-300 focus:ring-4 focus:ring-slate-100 max-[640px]:h-11"
                   />
                 </div>
 
@@ -394,7 +397,7 @@ export default function AuthPage() {
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
                     placeholder="010-1234-5678"
-                    className="h-12 rounded-lg border border-border px-4 text-[16px] bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary max-[640px]:h-11"
+                    className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-[16px] text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-slate-300 focus:ring-4 focus:ring-slate-100 max-[640px]:h-11"
                   />
                 </div>
               </>
@@ -409,7 +412,7 @@ export default function AuthPage() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="example@email.com"
-                className="h-12 rounded-lg border border-border px-4 text-[16px] bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary max-[640px]:h-11"
+                className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-[16px] text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-slate-300 focus:ring-4 focus:ring-slate-100 max-[640px]:h-11"
               />
             </div>
 
@@ -424,12 +427,12 @@ export default function AuthPage() {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder={isLogin ? "비밀번호를 입력하세요" : "영문, 숫자, 특수문자 조합 8자 이상"}
-                    className="h-12 w-full rounded-lg border border-border px-4 pr-12 text-[16px] bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary max-[640px]:h-11"
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 pr-12 text-[16px] text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-slate-300 focus:ring-4 focus:ring-slate-100 max-[640px]:h-11"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 border-none bg-transparent text-muted-foreground"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 border-none bg-transparent text-slate-400 transition-colors hover:text-slate-600"
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -468,12 +471,12 @@ export default function AuthPage() {
                       value={confirmPassword}
                       onChange={(event) => setConfirmPassword(event.target.value)}
                       placeholder="비밀번호를 다시 입력하세요"
-                      className="h-12 w-full rounded-lg border border-border px-4 pr-12 text-[16px] bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary max-[640px]:h-11"
+                      className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 pr-12 text-[16px] text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-slate-300 focus:ring-4 focus:ring-slate-100 max-[640px]:h-11"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword((prev) => !prev)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 border-none bg-transparent text-muted-foreground"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 border-none bg-transparent text-slate-400 transition-colors hover:text-slate-600"
                     >
                       {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
@@ -502,7 +505,7 @@ export default function AuthPage() {
               type="button"
               onClick={handleSubmit}
               disabled={loading}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border-none bg-header-navy text-[16px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 max-[640px]:h-11"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border-none bg-header-navy text-[16px] font-semibold text-white transition-all hover:opacity-95 active:scale-[0.99] disabled:opacity-50 max-[640px]:h-11"
             >
               {loading && <Loader2 className="h-5 w-5 animate-spin" />}
               {showForgot ? "재설정 링크 전송" : isLogin ? "로그인" : "회원가입"}
