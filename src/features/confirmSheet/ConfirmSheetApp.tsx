@@ -84,7 +84,6 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         replacement.style.lineHeight = styles.lineHeight;
         replacement.style.whiteSpace = "pre-wrap";
         replacement.style.wordBreak = "break-word";
-        replacement.style.overflowWrap = "anywhere";
       } else {
         replacement.style.display = "flex";
         replacement.style.alignItems = "center";
@@ -96,10 +95,9 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
               : "flex-start";
         replacement.style.padding = "0px";
         replacement.style.margin = "0px";
-        replacement.style.lineHeight = `${Math.max(sourceField.clientHeight * 0.93, 1)}px`;
+        replacement.style.transform = "translateY(-2.5px)";
+        replacement.style.lineHeight = fieldHeight;
         replacement.style.whiteSpace = "nowrap";
-        replacement.style.wordBreak = "keep-all";
-        replacement.style.transform = "translateY(-1.5px)";
       }
 
       replacement.textContent = nextValue || "\u00A0";
