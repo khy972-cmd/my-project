@@ -92,6 +92,8 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       replacement.style.wordBreak = isTextArea ? "break-word" : "normal";
       replacement.style.overflowWrap = "break-word";
       replacement.style.overflow = "visible";
+      replacement.style.transform = "translateY(-0.3em)";
+      replacement.style.transformOrigin = "top left";
       replacement.textContent = el.value || "";
 
       el.parentNode?.replaceChild(replacement, el);
