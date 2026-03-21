@@ -79,16 +79,30 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       const isTextArea = sourceField.tagName === "TEXTAREA";
       const nextValue = sourceField.value || "";
       const fieldWidth = styles.width || `${sourceField.clientWidth}px`;
-      const fieldHeight = isTextArea
-        ? `${Math.max(sourceField.scrollHeight, sourceField.clientHeight, 24)}px`
-        : styles.height || `${Math.max(sourceField.clientHeight, 24)}px`;
+      const fieldHeightPx = Math.max(sourceField.offsetHeight, 24);
+      const fieldHeight = `${fieldHeightPx}px`;
+      const fontSizePx = Math.max(parseFloat(styles.fontSize || "16"), 1);
+      const lineHeightPx = styles.lineHeight?.endsWith("px")
+        ? styles.lineHeight
+        : `${Math.round(fontSizePx * 1.4)}px`;
+      const textAlign = styles.textAlign || "left";
+      const justifyContent =
+        textAlign === "right" || textAlign === "end"
+          ? "flex-end"
+          : textAlign === "center"
+            ? "center"
+            : "flex-start";
 
       replacement.style.boxSizing = "border-box";
-      replacement.style.display = "block";
+      replacement.style.display = isTextArea ? "block" : "flex";
+      if (!isTextArea) {
+        replacement.style.alignItems = "center";
+        replacement.style.justifyContent = justifyContent;
+      }
       replacement.style.width = fieldWidth;
       replacement.style.height = fieldHeight;
       replacement.style.minHeight = fieldHeight;
-      replacement.style.padding = styles.padding;
+      replacement.style.padding = "0px";
       replacement.style.margin = styles.margin;
       replacement.style.border = styles.border;
       replacement.style.borderRadius = styles.borderRadius;
@@ -97,9 +111,9 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       replacement.style.fontFamily = styles.fontFamily;
       replacement.style.fontSize = styles.fontSize;
       replacement.style.fontWeight = styles.fontWeight;
-      replacement.style.lineHeight = styles.lineHeight;
+      replacement.style.lineHeight = isTextArea ? lineHeightPx : fieldHeight;
       replacement.style.letterSpacing = styles.letterSpacing;
-      replacement.style.textAlign = styles.textAlign;
+      replacement.style.textAlign = textAlign;
       replacement.style.verticalAlign = styles.verticalAlign;
       replacement.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
       replacement.style.wordBreak = isTextArea ? "break-word" : "keep-all";
@@ -168,6 +182,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         scrollX: 0,
         scrollY: 0,
         onclone: (clonedDoc) => {
+          clonedDoc.querySelectorAll(".signature-placeholder").forEach((el) => el.remove());
           if (clonedDoc.body) {
             clonedDoc.body.style.fontFamily = `"Pretendard Variable", Pretendard, Arial, sans-serif`;
           }
