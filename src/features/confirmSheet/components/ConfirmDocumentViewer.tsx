@@ -250,10 +250,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
               <Td>
                 <AutoTextarea
                   value={company}
-                  onChange={(next) => {
-                    setCompany(next);
-                    setOrg(next);
-                  }}
+                  onChange={setCompany}
                   placeholder="업체명 입력"
                 />
               </Td>
@@ -321,7 +318,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
                 onChange={(e) => {
                   const next = e.target.value;
                   setOrg(next);
-                  setCompany(next);
+                  setRecipient(next);
                 }}
                 placeholder="소속 입력"
               />
@@ -369,13 +366,17 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
               style={{
                 fontFamily: "inherit",
                 height: 60,
-                paddingTop: 20,
-                paddingBottom: 0,
-                lineHeight: 1.4,
-                marginBottom: 3,
+                padding: "0 0 4px",
+                lineHeight: "1.2",
+                marginBottom: 0,
+                verticalAlign: "bottom",
               }}
               value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setRecipient(next);
+                setOrg(next);
+              }}
               placeholder="회사명"
             />
             <input

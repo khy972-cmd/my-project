@@ -66,12 +66,11 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       const styles = clonedDoc.defaultView?.getComputedStyle(el);
       const replacement = clonedDoc.createElement("div");
       const isTextArea = el.tagName === "TEXTAREA";
-      const textAlign = styles?.textAlign || "left";
-      replacement.style.boxSizing = "border-box";
+      const fieldHeight = `${Math.max(el.scrollHeight || 0, el.clientHeight || 24, 24)}px`;
+      replacement.style.boxSizing = styles?.boxSizing || "border-box";
       replacement.style.display = "block";
       replacement.style.width = styles?.width || "100%";
-      replacement.style.minHeight = styles?.minHeight || `${el.clientHeight || 24}px`;
-      replacement.style.height = !isTextArea ? styles?.height || `${el.clientHeight || 24}px` : "auto";
+      replacement.style.minHeight = styles?.minHeight || styles?.height || fieldHeight;
       replacement.style.padding = styles?.padding || "0";
       replacement.style.margin = styles?.margin || "0";
       replacement.style.border = styles?.border || "none";
@@ -87,12 +86,12 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       replacement.style.fontWeight = styles?.fontWeight || "600";
       replacement.style.lineHeight = styles?.lineHeight || "1.4";
       replacement.style.letterSpacing = styles?.letterSpacing || "normal";
-      replacement.style.textAlign = textAlign;
-      replacement.style.verticalAlign = styles?.verticalAlign || "middle";
-      replacement.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
-      replacement.style.wordBreak = isTextArea ? "break-word" : "keep-all";
-      replacement.style.overflowWrap = isTextArea ? "anywhere" : "normal";
-      replacement.style.overflow = "hidden";
+      replacement.style.textAlign = styles?.textAlign || "left";
+      replacement.style.verticalAlign = styles?.verticalAlign || "baseline";
+      replacement.style.whiteSpace = isTextArea ? "pre-wrap" : "pre";
+      replacement.style.wordBreak = isTextArea ? "break-word" : "normal";
+      replacement.style.overflowWrap = "break-word";
+      replacement.style.overflow = "visible";
       replacement.textContent = el.value || "";
 
       el.parentNode?.replaceChild(replacement, el);
