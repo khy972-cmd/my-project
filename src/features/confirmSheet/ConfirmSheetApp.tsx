@@ -94,31 +94,41 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
             : "flex-start";
 
       replacement.style.boxSizing = "border-box";
-      replacement.style.display = isTextArea ? "block" : "flex";
-      if (!isTextArea) {
-        replacement.style.alignItems = "center";
-        replacement.style.justifyContent = justifyContent;
-      }
       replacement.style.width = fieldWidth;
       replacement.style.height = fieldHeight;
       replacement.style.minHeight = fieldHeight;
-      replacement.style.padding = "0px";
-      replacement.style.margin = styles.margin;
-      replacement.style.border = styles.border;
-      replacement.style.borderRadius = styles.borderRadius;
       replacement.style.background = "transparent";
       replacement.style.color = styles.color;
       replacement.style.fontFamily = styles.fontFamily;
       replacement.style.fontSize = styles.fontSize;
       replacement.style.fontWeight = styles.fontWeight;
-      replacement.style.lineHeight = isTextArea ? lineHeightPx : fieldHeight;
       replacement.style.letterSpacing = styles.letterSpacing;
-      replacement.style.textAlign = textAlign;
-      replacement.style.verticalAlign = styles.verticalAlign;
-      replacement.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
-      replacement.style.wordBreak = isTextArea ? "break-word" : "keep-all";
-      replacement.style.overflowWrap = isTextArea ? "anywhere" : "normal";
       replacement.style.overflow = "hidden";
+      replacement.style.borderTop = styles.borderTop;
+      replacement.style.borderRight = styles.borderRight;
+      replacement.style.borderBottom = styles.borderBottom;
+      replacement.style.borderLeft = styles.borderLeft;
+
+      if (isTextArea) {
+        replacement.style.display = "block";
+        replacement.style.padding = styles.padding;
+        replacement.style.margin = styles.margin;
+        replacement.style.lineHeight = styles.lineHeight;
+        replacement.style.textAlign = styles.textAlign;
+        replacement.style.verticalAlign = styles.verticalAlign;
+        replacement.style.whiteSpace = "pre-wrap";
+        replacement.style.wordBreak = "break-word";
+        replacement.style.overflowWrap = "anywhere";
+      } else {
+        replacement.style.display = "flex";
+        replacement.style.alignItems = "center";
+        replacement.style.justifyContent = styles.textAlign === "center" ? "center" : styles.textAlign === "right" ? "flex-end" : "flex-start";
+        replacement.style.padding = "0px";
+        replacement.style.margin = "0px";
+        replacement.style.whiteSpace = "nowrap";
+        replacement.style.wordBreak = "keep-all";
+        replacement.style.lineHeight = "1";
+      }
       replacement.textContent = nextValue || "\u00A0";
 
       field.parentNode?.replaceChild(replacement, field);
@@ -130,6 +140,31 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       el.style.margin = "0 auto";
       el.style.verticalAlign = "middle";
     });
+
+    const signatureBox = root.querySelector('[data-confirm-signature-box="1"]') as HTMLElement | null;
+    if (signatureBox) {
+      signatureBox.style.display = "flex";
+      signatureBox.style.alignItems = "center";
+      signatureBox.style.justifyContent = "center";
+      signatureBox.style.overflow = "hidden";
+      signatureBox.style.position = "relative";
+    }
+
+    const signatureImage = root.querySelector(
+      '[data-confirm-signature-image="1"]',
+    ) as HTMLImageElement | null;
+    if (signatureImage) {
+      signatureImage.style.display = "block";
+      signatureImage.style.margin = "0";
+      signatureImage.style.verticalAlign = "middle";
+      signatureImage.style.position = "static";
+      signatureImage.style.transform = "none";
+      signatureImage.style.width = "auto";
+      signatureImage.style.height = "auto";
+      signatureImage.style.maxWidth = "90%";
+      signatureImage.style.maxHeight = "90%";
+      signatureImage.style.objectFit = "contain";
+    }
   };
 
   const captureDocumentCanvas = async () => {
