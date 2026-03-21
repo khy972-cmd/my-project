@@ -75,63 +75,54 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       if (!sourceField) return;
 
       const styles = window.getComputedStyle(sourceField);
-      const replacement = clonedDoc.createElement("div");
       const isTextArea = sourceField.tagName === "TEXTAREA";
       const nextValue = sourceField.value || "";
-      const fieldWidth = styles.width || `${sourceField.clientWidth}px`;
-      const fieldHeightPx = Math.max(sourceField.offsetHeight, 24);
+      const fieldWidth = styles.width || `${sourceField.offsetWidth}px`;
+      const fieldHeightPx = Math.max(
+        isTextArea ? sourceField.scrollHeight : sourceField.offsetHeight,
+        sourceField.offsetHeight,
+        24,
+      );
       const fieldHeight = `${fieldHeightPx}px`;
-      const fontSizePx = Math.max(parseFloat(styles.fontSize || "16"), 1);
-      const lineHeightPx = styles.lineHeight?.endsWith("px")
-        ? styles.lineHeight
-        : `${Math.round(fontSizePx * 1.4)}px`;
-      const textAlign = styles.textAlign || "left";
-      const justifyContent =
-        textAlign === "right" || textAlign === "end"
-          ? "flex-end"
-          : textAlign === "center"
-            ? "center"
-            : "flex-start";
 
-      replacement.style.boxSizing = "border-box";
-      replacement.style.width = fieldWidth;
-      replacement.style.height = fieldHeight;
-      replacement.style.minHeight = fieldHeight;
-      replacement.style.background = "transparent";
-      replacement.style.color = styles.color;
-      replacement.style.fontFamily = styles.fontFamily;
-      replacement.style.fontSize = styles.fontSize;
-      replacement.style.fontWeight = styles.fontWeight;
-      replacement.style.letterSpacing = styles.letterSpacing;
-      replacement.style.overflow = "hidden";
-      replacement.style.borderTop = styles.borderTop;
-      replacement.style.borderRight = styles.borderRight;
-      replacement.style.borderBottom = styles.borderBottom;
-      replacement.style.borderLeft = styles.borderLeft;
-
-      if (isTextArea) {
-        replacement.style.display = "block";
-        replacement.style.padding = styles.padding;
-        replacement.style.margin = styles.margin;
-        replacement.style.lineHeight = styles.lineHeight;
-        replacement.style.textAlign = styles.textAlign;
-        replacement.style.verticalAlign = styles.verticalAlign;
-        replacement.style.whiteSpace = "pre-wrap";
-        replacement.style.wordBreak = "break-word";
-        replacement.style.overflowWrap = "anywhere";
+      field.value = nextValue;
+      if (field instanceof HTMLInputElement) {
+        field.setAttribute("value", nextValue);
       } else {
-        replacement.style.display = "flex";
-        replacement.style.alignItems = "center";
-        replacement.style.justifyContent = styles.textAlign === "center" ? "center" : styles.textAlign === "right" ? "flex-end" : "flex-start";
-        replacement.style.padding = "0px";
-        replacement.style.margin = "0px";
-        replacement.style.whiteSpace = "nowrap";
-        replacement.style.wordBreak = "keep-all";
-        replacement.style.lineHeight = "1";
+        field.textContent = nextValue;
       }
-      replacement.textContent = nextValue || "\u00A0";
 
-      field.parentNode?.replaceChild(replacement, field);
+      field.style.boxSizing = "border-box";
+      field.style.display = "block";
+      field.style.width = fieldWidth;
+      field.style.height = fieldHeight;
+      field.style.minHeight = fieldHeight;
+      field.style.padding = styles.padding;
+      field.style.margin = styles.margin;
+      field.style.borderTop = styles.borderTop;
+      field.style.borderRight = styles.borderRight;
+      field.style.borderBottom = styles.borderBottom;
+      field.style.borderLeft = styles.borderLeft;
+      field.style.borderRadius = styles.borderRadius;
+      field.style.background = "transparent";
+      field.style.color = styles.color;
+      field.style.fontFamily = styles.fontFamily;
+      field.style.fontSize = styles.fontSize;
+      field.style.fontWeight = styles.fontWeight;
+      field.style.letterSpacing = styles.letterSpacing;
+      field.style.lineHeight = styles.lineHeight;
+      field.style.textAlign = styles.textAlign;
+      field.style.verticalAlign = styles.verticalAlign;
+      field.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
+      field.style.wordBreak = isTextArea ? "break-word" : "keep-all";
+      field.style.overflowWrap = isTextArea ? "anywhere" : "normal";
+      field.style.overflow = "hidden";
+      field.style.outline = "none";
+      field.style.boxShadow = "none";
+
+      if (field instanceof HTMLTextAreaElement) {
+        field.style.resize = "none";
+      }
     });
 
     root.querySelectorAll("img").forEach((image) => {
@@ -143,27 +134,33 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
 
     const signatureBox = root.querySelector('[data-confirm-signature-box="1"]') as HTMLElement | null;
     if (signatureBox) {
+      signatureBox.innerHTML = "";
       signatureBox.style.display = "flex";
       signatureBox.style.alignItems = "center";
       signatureBox.style.justifyContent = "center";
       signatureBox.style.overflow = "hidden";
       signatureBox.style.position = "relative";
+      signatureBox.style.padding = "0";
+      signatureBox.style.margin = "0";
     }
 
-    const signatureImage = root.querySelector(
+    const sourceSignatureImage = sourceRoot.querySelector(
       '[data-confirm-signature-image="1"]',
     ) as HTMLImageElement | null;
-    if (signatureImage) {
+    if (signatureBox && sourceSignatureImage?.src) {
+      const signatureImage = clonedDoc.createElement("img");
+      signatureImage.src = sourceSignatureImage.src;
+      signatureImage.alt = sourceSignatureImage.alt || "서명";
       signatureImage.style.display = "block";
       signatureImage.style.margin = "0";
       signatureImage.style.verticalAlign = "middle";
-      signatureImage.style.position = "static";
-      signatureImage.style.transform = "none";
       signatureImage.style.width = "auto";
       signatureImage.style.height = "auto";
       signatureImage.style.maxWidth = "90%";
       signatureImage.style.maxHeight = "90%";
       signatureImage.style.objectFit = "contain";
+      signatureImage.style.flexShrink = "1";
+      signatureBox.appendChild(signatureImage);
     }
   };
 
