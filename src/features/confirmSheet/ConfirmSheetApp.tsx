@@ -69,6 +69,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       const el = field as HTMLInputElement | HTMLTextAreaElement;
       const styles = clonedDoc.defaultView?.getComputedStyle(el);
       const replacement = clonedDoc.createElement("div");
+      const content = clonedDoc.createElement("span");
       const isTextArea = el.tagName === "TEXTAREA";
       const textAlign = styles?.textAlign || "left";
       const fontSize = parsePx(styles?.fontSize, 16);
@@ -82,18 +83,19 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       const minHeight = parsePx(styles?.minHeight, boxHeight || fontSize);
       const resolvedLineHeight =
         styles?.lineHeight && styles.lineHeight !== "normal" ? styles.lineHeight : `${Math.round(fontSize * 1.4)}px`;
+      const lineHeightPx = parsePx(resolvedLineHeight, Math.round(fontSize * 1.4));
+      const verticalCenterPadding = Math.max(0, Math.round((Math.max(boxHeight, minHeight) - borderTop - borderBottom - lineHeightPx) / 2));
 
-      replacement.textContent = el.value || "";
       replacement.style.boxSizing = "border-box";
       replacement.style.display = "flex";
-      replacement.style.flexDirection = "column";
-      replacement.style.justifyContent = isTextArea ? "flex-start" : "center";
+      replacement.style.flexDirection = "row";
+      replacement.style.justifyContent = "flex-start";
       replacement.style.alignItems = "stretch";
       replacement.style.width = styles?.width || "100%";
       replacement.style.minHeight = `${Math.max(minHeight, boxHeight || fontSize)}px`;
       replacement.style.height = !isTextArea && boxHeight > 0 ? `${boxHeight}px` : "auto";
-      replacement.style.paddingTop = isTextArea ? `${paddingTop}px` : "0px";
-      replacement.style.paddingBottom = isTextArea ? `${paddingBottom}px` : "0px";
+      replacement.style.paddingTop = isTextArea ? `${paddingTop}px` : `${verticalCenterPadding}px`;
+      replacement.style.paddingBottom = isTextArea ? `${paddingBottom}px` : `${verticalCenterPadding}px`;
       replacement.style.paddingLeft = paddingLeft;
       replacement.style.paddingRight = paddingRight;
       replacement.style.margin = styles?.margin || "0";
@@ -111,10 +113,24 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       replacement.style.lineHeight = resolvedLineHeight;
       replacement.style.letterSpacing = styles?.letterSpacing || "normal";
       replacement.style.textAlign = textAlign;
-      replacement.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
-      replacement.style.wordBreak = isTextArea ? "break-word" : "keep-all";
-      replacement.style.overflowWrap = isTextArea ? "anywhere" : "normal";
       replacement.style.overflow = "hidden";
+
+      content.textContent = el.value || "";
+      content.style.display = "block";
+      content.style.width = "100%";
+      content.style.color = "inherit";
+      content.style.fontFamily = "inherit";
+      content.style.fontSize = "inherit";
+      content.style.fontWeight = "inherit";
+      content.style.letterSpacing = "inherit";
+      content.style.textAlign = textAlign;
+      content.style.lineHeight = isTextArea ? resolvedLineHeight : `${lineHeightPx}px`;
+      content.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
+      content.style.wordBreak = isTextArea ? "break-word" : "keep-all";
+      content.style.overflowWrap = isTextArea ? "anywhere" : "normal";
+      content.style.transform = "translateY(0)";
+
+      replacement.appendChild(content);
 
       el.parentNode?.replaceChild(replacement, el);
     });
