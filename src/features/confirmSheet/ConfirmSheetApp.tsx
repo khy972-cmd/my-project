@@ -26,6 +26,81 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     setZoom(getDefaultZoom());
   }, []);
 
+  const waitForImages = async (root: HTMLElement) => {
+    const images = Array.from(root.querySelectorAll("img"));
+    await Promise.all(
+      images.map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) {
+              resolve();
+              return;
+            }
+            img.addEventListener("load", () => resolve(), { once: true });
+            img.addEventListener("error", () => resolve(), { once: true });
+          }),
+      ),
+    );
+  };
+
+  const fixCaptureFields = (clonedDoc: Document) => {
+    const root = clonedDoc.querySelector('[data-confirm-capture-root="1"]') as HTMLElement | null;
+    if (!root) return;
+
+    root.querySelectorAll("table").forEach((table) => {
+      const el = table as HTMLElement;
+      el.style.tableLayout = "fixed";
+      el.style.width = "100%";
+      el.style.borderCollapse = "collapse";
+    });
+
+    root.querySelectorAll("td, th").forEach((cell) => {
+      const el = cell as HTMLElement;
+      el.style.verticalAlign = "middle";
+      el.style.lineHeight = "1.4";
+      el.style.boxSizing = "border-box";
+    });
+
+    root.querySelectorAll("input[type='text'], textarea").forEach((field) => {
+      const el = field as HTMLInputElement | HTMLTextAreaElement;
+      const styles = clonedDoc.defaultView?.getComputedStyle(el);
+      const replacement = clonedDoc.createElement("div");
+      const isTextArea = el.tagName === "TEXTAREA";
+      const textAlign = styles?.textAlign || "left";
+
+      replacement.textContent = el.value || "";
+      replacement.style.boxSizing = "border-box";
+      replacement.style.display = isTextArea ? "block" : "flex";
+      replacement.style.alignItems = isTextArea ? "stretch" : "center";
+      replacement.style.justifyContent = textAlign === "center" ? "center" : textAlign === "right" ? "flex-end" : "flex-start";
+      replacement.style.width = styles?.width || "100%";
+      replacement.style.minHeight = styles?.minHeight || `${el.clientHeight || 24}px`;
+      replacement.style.height = !isTextArea ? styles?.height || `${el.clientHeight || 24}px` : "auto";
+      replacement.style.padding = styles?.padding || "0";
+      replacement.style.margin = styles?.margin || "0";
+      replacement.style.border = styles?.border || "none";
+      replacement.style.borderTop = styles?.borderTop || "none";
+      replacement.style.borderRight = styles?.borderRight || "none";
+      replacement.style.borderBottom = styles?.borderBottom || "none";
+      replacement.style.borderLeft = styles?.borderLeft || "none";
+      replacement.style.borderRadius = styles?.borderRadius || "0";
+      replacement.style.background = "transparent";
+      replacement.style.color = styles?.color || "#000000";
+      replacement.style.fontFamily = styles?.fontFamily || "inherit";
+      replacement.style.fontSize = styles?.fontSize || "16px";
+      replacement.style.fontWeight = styles?.fontWeight || "600";
+      replacement.style.lineHeight = styles?.lineHeight || (isTextArea ? "1.4" : styles?.height || "1.4");
+      replacement.style.letterSpacing = styles?.letterSpacing || "normal";
+      replacement.style.textAlign = textAlign;
+      replacement.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
+      replacement.style.wordBreak = isTextArea ? "break-word" : "keep-all";
+      replacement.style.overflowWrap = isTextArea ? "anywhere" : "normal";
+      replacement.style.overflow = "hidden";
+
+      el.parentNode?.replaceChild(replacement, el);
+    });
+  };
+
   const captureDocumentCanvas = async () => {
     if (!documentRef.current) {
       throw new Error("missing_document");
@@ -47,6 +122,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     clone.style.margin = "0";
     clone.style.boxShadow = "none";
     clone.style.maxWidth = "none";
+    clone.setAttribute("data-confirm-capture-root", "1");
 
     host.appendChild(clone);
     document.body.appendChild(host);
@@ -54,6 +130,10 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     try {
       const width = clone.scrollWidth || source.scrollWidth || source.offsetWidth;
       const height = clone.scrollHeight || source.scrollHeight || source.offsetHeight;
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+      await waitForImages(clone);
 
       return await html2canvas(clone, {
         scale: Math.max(2, window.devicePixelRatio || 1),
@@ -66,6 +146,12 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         windowHeight: height,
         scrollX: 0,
         scrollY: 0,
+        onclone: (clonedDoc) => {
+          if (clonedDoc.body) {
+            clonedDoc.body.style.fontFamily = `"Pretendard Variable", Pretendard, Arial, sans-serif`;
+          }
+          fixCaptureFields(clonedDoc);
+        },
       });
     } finally {
       document.body.removeChild(host);

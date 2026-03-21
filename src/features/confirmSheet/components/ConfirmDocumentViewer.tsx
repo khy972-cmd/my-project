@@ -185,15 +185,27 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
     const [period, setPeriod] = useState("");
     const [content, setContent] = useState("* 지하주차장 PC부재 균열보수 완료\n* ");
     const [notes, setNotes] = useState("");
-    const [org, setOrg] = useState("(주)이노피앤씨");
+    const [org, setOrg] = useState("");
     const [signerName, setSignerName] = useState("");
     const [recipient, setRecipient] = useState("");
     const [suffix, setSuffix] = useState("귀중");
+    const lastAutoOrgRef = useRef("");
 
     const d = new Date();
     const [dateStr, setDateStr] = useState(
       `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`,
     );
+
+    useEffect(() => {
+      const nextAuto = company.trim();
+      setOrg((prev) => {
+        if (!prev.trim() || prev === lastAutoOrgRef.current) {
+          lastAutoOrgRef.current = nextAuto;
+          return nextAuto;
+        }
+        return prev;
+      });
+    }, [company]);
 
     useImperativeHandle(ref, () => ({
       reset: () => {
@@ -204,6 +216,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
         setContent("");
         setNotes("");
         setOrg("");
+        lastAutoOrgRef.current = "";
         setSignerName("");
         setRecipient("");
         setSuffix("귀중");
