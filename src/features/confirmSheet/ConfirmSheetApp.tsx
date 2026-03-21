@@ -13,6 +13,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
   const A4_HEIGHT_MM = 297;
   const [zoom, setZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [signModalOpen, setSignModalOpen] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [viewerResetKey, setViewerResetKey] = useState(0);
@@ -45,125 +46,6 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     );
   };
 
-  const fixCaptureFields = (sourceRoot: HTMLElement, clonedDoc: Document) => {
-    const root = clonedDoc.querySelector('[data-confirm-capture-root="1"]') as HTMLElement | null;
-    if (!root) return;
-
-    root.querySelectorAll("table").forEach((table) => {
-      const el = table as HTMLElement;
-      el.style.tableLayout = "fixed";
-      el.style.width = "100%";
-      el.style.borderCollapse = "collapse";
-    });
-
-    root.querySelectorAll("td, th").forEach((cell) => {
-      const el = cell as HTMLElement;
-      el.style.verticalAlign = "middle";
-      el.style.lineHeight = "1.4";
-      el.style.boxSizing = "border-box";
-    });
-
-    const sourceFields = Array.from(
-      sourceRoot.querySelectorAll("input[type='text'], textarea"),
-    ) as Array<HTMLInputElement | HTMLTextAreaElement>;
-    const clonedFields = Array.from(
-      root.querySelectorAll("input[type='text'], textarea"),
-    ) as Array<HTMLInputElement | HTMLTextAreaElement>;
-
-    clonedFields.forEach((field, index) => {
-      const sourceField = sourceFields[index];
-      if (!sourceField) return;
-
-      const styles = window.getComputedStyle(sourceField);
-      const isTextArea = sourceField.tagName === "TEXTAREA";
-      const nextValue = sourceField.value || "";
-      const fieldWidth = styles.width || `${sourceField.offsetWidth}px`;
-      const fieldHeightPx = Math.max(
-        isTextArea ? sourceField.scrollHeight : sourceField.offsetHeight,
-        sourceField.offsetHeight,
-        24,
-      );
-      const fieldHeight = `${fieldHeightPx}px`;
-
-      field.value = nextValue;
-      if (field instanceof HTMLInputElement) {
-        field.setAttribute("value", nextValue);
-      } else {
-        field.textContent = nextValue;
-      }
-
-      field.style.boxSizing = "border-box";
-      field.style.display = "block";
-      field.style.width = fieldWidth;
-      field.style.height = fieldHeight;
-      field.style.minHeight = fieldHeight;
-      field.style.padding = styles.padding;
-      field.style.margin = styles.margin;
-      field.style.borderTop = styles.borderTop;
-      field.style.borderRight = styles.borderRight;
-      field.style.borderBottom = styles.borderBottom;
-      field.style.borderLeft = styles.borderLeft;
-      field.style.borderRadius = styles.borderRadius;
-      field.style.background = "transparent";
-      field.style.color = styles.color;
-      field.style.fontFamily = styles.fontFamily;
-      field.style.fontSize = styles.fontSize;
-      field.style.fontWeight = styles.fontWeight;
-      field.style.letterSpacing = styles.letterSpacing;
-      field.style.lineHeight = styles.lineHeight;
-      field.style.textAlign = styles.textAlign;
-      field.style.verticalAlign = styles.verticalAlign;
-      field.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
-      field.style.wordBreak = isTextArea ? "break-word" : "keep-all";
-      field.style.overflowWrap = isTextArea ? "anywhere" : "normal";
-      field.style.overflow = "hidden";
-      field.style.outline = "none";
-      field.style.boxShadow = "none";
-
-      if (field instanceof HTMLTextAreaElement) {
-        field.style.resize = "none";
-      }
-    });
-
-    root.querySelectorAll("img").forEach((image) => {
-      const el = image as HTMLImageElement;
-      el.style.display = "block";
-      el.style.margin = "0 auto";
-      el.style.verticalAlign = "middle";
-    });
-
-    const signatureBox = root.querySelector('[data-confirm-signature-box="1"]') as HTMLElement | null;
-    if (signatureBox) {
-      signatureBox.innerHTML = "";
-      signatureBox.style.display = "flex";
-      signatureBox.style.alignItems = "center";
-      signatureBox.style.justifyContent = "center";
-      signatureBox.style.overflow = "hidden";
-      signatureBox.style.position = "relative";
-      signatureBox.style.padding = "0";
-      signatureBox.style.margin = "0";
-    }
-
-    const sourceSignatureImage = sourceRoot.querySelector(
-      '[data-confirm-signature-image="1"]',
-    ) as HTMLImageElement | null;
-    if (signatureBox && sourceSignatureImage?.src) {
-      const signatureImage = clonedDoc.createElement("img");
-      signatureImage.src = sourceSignatureImage.src;
-      signatureImage.alt = sourceSignatureImage.alt || "서명";
-      signatureImage.style.display = "block";
-      signatureImage.style.margin = "0";
-      signatureImage.style.verticalAlign = "middle";
-      signatureImage.style.width = "auto";
-      signatureImage.style.height = "auto";
-      signatureImage.style.maxWidth = "90%";
-      signatureImage.style.maxHeight = "90%";
-      signatureImage.style.objectFit = "contain";
-      signatureImage.style.flexShrink = "1";
-      signatureBox.appendChild(signatureImage);
-    }
-  };
-
   const captureDocumentCanvas = async () => {
     if (!documentRef.current) {
       throw new Error("missing_document");
@@ -189,7 +71,6 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     clone.style.minHeight = `${A4_HEIGHT_MM}mm`;
     clone.style.height = `${A4_HEIGHT_MM}mm`;
     clone.style.overflow = "hidden";
-    clone.setAttribute("data-confirm-capture-root", "1");
 
     host.appendChild(clone);
     document.body.appendChild(host);
@@ -197,9 +78,11 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     try {
       const width = clone.offsetWidth || source.offsetWidth;
       const height = clone.offsetHeight || source.offsetHeight;
+
       if (document.fonts?.ready) {
         await document.fonts.ready;
       }
+
       await waitForImages(clone);
 
       return await html2canvas(clone, {
@@ -213,13 +96,6 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         windowHeight: height,
         scrollX: 0,
         scrollY: 0,
-        onclone: (clonedDoc) => {
-          clonedDoc.querySelectorAll(".signature-placeholder").forEach((el) => el.remove());
-          if (clonedDoc.body) {
-            clonedDoc.body.style.fontFamily = `"Pretendard Variable", Pretendard, Arial, sans-serif`;
-          }
-          fixCaptureFields(source, clonedDoc);
-        },
       });
     } finally {
       document.body.removeChild(host);
@@ -238,6 +114,9 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     toast("PDF 생성 중...");
 
     try {
+      setIsCapturing(true);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       const canvas = await captureDocumentCanvas();
       const { jsPDF } = await import("jspdf");
       const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
@@ -263,6 +142,8 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     } catch (error) {
       console.error(error);
       toast.error("저장 실패");
+    } finally {
+      setIsCapturing(false);
     }
   };
 
@@ -275,6 +156,9 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     toast("이미지 생성 중...");
 
     try {
+      setIsCapturing(true);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       const canvas = await captureDocumentCanvas();
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.95));
       if (!blob) throw new Error("blob_failed");
@@ -284,6 +168,8 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     } catch (error: any) {
       if (error?.name === "AbortError") return;
       toast.error("공유 실패");
+    } finally {
+      setIsCapturing(false);
     }
   };
 
@@ -293,6 +179,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     setZoom(getDefaultZoom());
     setViewerResetKey((prev) => prev + 1);
   };
+
   const handlePanToggle = () => {
     setIsPanning((p) => {
       toast(!p ? "이동 모드" : "입력 모드");
@@ -326,6 +213,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
           onSignatureClick={() => setSignModalOpen(true)}
           onZoomChange={(next) => setZoom(Math.min(3, Math.max(0.3, next)))}
           resetKey={viewerResetKey}
+          isCapturing={isCapturing}
         />
       </PreviewViewport>
 

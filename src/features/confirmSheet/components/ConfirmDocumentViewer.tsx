@@ -10,6 +10,7 @@ import {
 interface ConfirmDocumentViewerProps {
   zoom: number;
   isPanning: boolean;
+  isCapturing: boolean;
   documentRef: RefObject<HTMLDivElement>;
   formRef: RefObject<{ reset: () => void }>;
   signatureDataUrl: string | null;
@@ -21,6 +22,7 @@ interface ConfirmDocumentViewerProps {
 export default function ConfirmDocumentViewer({
   zoom,
   isPanning,
+  isCapturing,
   documentRef,
   formRef,
   signatureDataUrl,
@@ -165,6 +167,7 @@ export default function ConfirmDocumentViewer({
           documentRef={documentRef}
           signatureDataUrl={signatureDataUrl}
           onSignatureClick={onSignatureClick}
+          isCapturing={isCapturing}
         />
       </div>
     </div>
@@ -175,10 +178,11 @@ interface DocumentFormProps {
   documentRef: RefObject<HTMLDivElement>;
   signatureDataUrl: string | null;
   onSignatureClick: () => void;
+  isCapturing: boolean;
 }
 
 const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
-  ({ documentRef, signatureDataUrl, onSignatureClick }, ref) => {
+  ({ documentRef, signatureDataUrl, onSignatureClick, isCapturing }, ref) => {
     const [site, setSite] = useState("자이 아파트 101동");
     const [company, setCompany] = useState("");
     const [workName, setWorkName] = useState("");
@@ -226,12 +230,12 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
           fontFamily: `"Pretendard Variable", Pretendard, sans-serif`,
         }}
       >
-        <div className="text-center mb-[30px] border-b-[3px] border-double border-black pb-[15px]">
-          <h1 className="text-[36px] font-black tracking-[5px] text-[#111] m-0">작 업 완 료 확 인 서</h1>
+        <div className="mb-[30px] border-b-[3px] border-double border-black pb-[15px] text-center">
+          <h1 className="m-0 text-[36px] font-black tracking-[5px] text-[#111]">작 업 완 료 확 인 서</h1>
         </div>
 
         <table
-          className="w-full border-collapse mb-5"
+          className="mb-5 w-full border-collapse"
           style={{ border: "2px solid #1e293b", tableLayout: "fixed" }}
         >
           <colgroup>
@@ -244,7 +248,12 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             <tr>
               <Th>현 장 명</Th>
               <Td>
-                <AutoTextarea value={site} onChange={setSite} placeholder="내용 입력" />
+                <AutoTextarea
+                  value={site}
+                  onChange={setSite}
+                  placeholder="내용 입력"
+                  isCapturing={isCapturing}
+                />
               </Td>
               <Th>업 체</Th>
               <Td>
@@ -252,140 +261,200 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
                   value={company}
                   onChange={setCompany}
                   placeholder="업체명 입력"
+                  isCapturing={isCapturing}
                 />
               </Td>
             </tr>
             <tr>
               <Th>공 사 명</Th>
               <Td>
-                <AutoTextarea value={workName} onChange={setWorkName} placeholder="공사명 입력" />
+                <AutoTextarea
+                  value={workName}
+                  onChange={setWorkName}
+                  placeholder="공사명 입력"
+                  isCapturing={isCapturing}
+                />
               </Td>
               <Th>공사기간</Th>
               <Td>
-                <AutoTextarea value={period} onChange={setPeriod} placeholder="기간 입력" />
+                <AutoTextarea
+                  value={period}
+                  onChange={setPeriod}
+                  placeholder="기간 입력"
+                  isCapturing={isCapturing}
+                />
               </Td>
             </tr>
           </tbody>
         </table>
 
         <SectionBlock title="작업내용">
-          <textarea
-            className="flex-1 w-full border-none bg-transparent text-[16px] font-semibold text-black outline-none resize-none leading-relaxed"
-            style={{ fontFamily: "inherit" }}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="상세 내용"
-          />
+          {isCapturing ? (
+            <CaptureField
+              className="flex-1 w-full border-none bg-transparent text-[16px] font-semibold leading-relaxed text-black whitespace-pre-wrap break-words"
+              style={{ fontFamily: "inherit" }}
+              value={content}
+            />
+          ) : (
+            <textarea
+              className="flex-1 w-full resize-none border-none bg-transparent text-[16px] font-semibold leading-relaxed text-black outline-none"
+              style={{ fontFamily: "inherit" }}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="상세 내용"
+            />
+          )}
         </SectionBlock>
 
         <SectionBlock title="특기사항" className="h-[150px]">
-          <textarea
-            className="flex-1 w-full border-none bg-transparent text-[16px] font-semibold text-black outline-none resize-none"
-            style={{ fontFamily: "inherit" }}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="특이사항"
-          />
+          {isCapturing ? (
+            <CaptureField
+              className="flex-1 w-full border-none bg-transparent text-[16px] font-semibold text-black whitespace-pre-wrap break-words"
+              style={{ fontFamily: "inherit" }}
+              value={notes}
+            />
+          ) : (
+            <textarea
+              className="flex-1 w-full resize-none border-none bg-transparent text-[16px] font-semibold text-black outline-none"
+              style={{ fontFamily: "inherit" }}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="특이사항"
+            />
+          )}
         </SectionBlock>
 
         <div className="mt-[10px] text-center">
-          <div className="text-[20px] font-extrabold mb-[25px]">
+          <div className="mb-[25px] text-[20px] font-extrabold">
             상기 사항과 같이 작업을 완료하였음을 확인합니다.
           </div>
 
-          <input
-            type="text"
-            className="text-[20px] font-extrabold text-center w-full border-none bg-transparent outline-none mb-[30px]"
-            style={{ fontFamily: "inherit" }}
-            value={dateStr}
-            onChange={(e) => setDateStr(e.target.value)}
-          />
+          {isCapturing ? (
+            <CaptureField
+              className="mb-[30px] w-full border-none bg-transparent text-center text-[20px] font-extrabold"
+              style={{ fontFamily: "inherit" }}
+              value={dateStr}
+            />
+          ) : (
+            <input
+              type="text"
+              className="mb-[30px] w-full border-none bg-transparent text-center text-[20px] font-extrabold outline-none"
+              style={{ fontFamily: "inherit" }}
+              value={dateStr}
+              onChange={(e) => setDateStr(e.target.value)}
+            />
+          )}
 
           <div
-            className="grid mb-5"
+            className="mb-5 grid"
             style={{
               gridTemplateColumns: "33% 27% 40%",
               border: "2px solid #1e293b",
             }}
           >
-            <div className="bg-[#f8fafc] flex flex-col justify-center items-center p-[10px] gap-2 border-r border-[#1e293b]">
-              <span className="font-extrabold text-[18px] text-[#334155]">소 속 :</span>
-              <input
-                type="text"
-                className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight outline-none"
-                style={{ fontFamily: "inherit" }}
-                value={org}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setOrg(next);
-                  setRecipient(next);
-                }}
-                placeholder="소속 입력"
-              />
+            <div className="flex flex-col items-center justify-center gap-2 border-r border-[#1e293b] bg-[#f8fafc] p-[10px]">
+              <span className="text-[18px] font-extrabold text-[#334155]">소 속 :</span>
+              {isCapturing ? (
+                <CaptureField
+                  className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight"
+                  style={{ fontFamily: "inherit" }}
+                  value={org}
+                />
+              ) : (
+                <input
+                  type="text"
+                  className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight outline-none"
+                  style={{ fontFamily: "inherit" }}
+                  value={org}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setOrg(next);
+                    setRecipient(next);
+                  }}
+                  placeholder="소속 입력"
+                />
+              )}
             </div>
 
-            <div className="bg-[#f8fafc] flex flex-col justify-center items-center p-[10px] gap-2 border-r border-[#1e293b]">
-              <span className="font-extrabold text-[18px] text-[#334155]">성 명 :</span>
-              <input
-                type="text"
-                className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight outline-none"
-                style={{ fontFamily: "inherit" }}
-                value={signerName}
-                onChange={(e) => setSignerName(e.target.value)}
-                placeholder="이름 입력"
-              />
+            <div className="flex flex-col items-center justify-center gap-2 border-r border-[#1e293b] bg-[#f8fafc] p-[10px]">
+              <span className="text-[18px] font-extrabold text-[#334155]">성 명 :</span>
+              {isCapturing ? (
+                <CaptureField
+                  className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight"
+                  style={{ fontFamily: "inherit" }}
+                  value={signerName}
+                />
+              ) : (
+                <input
+                  type="text"
+                  className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight outline-none"
+                  style={{ fontFamily: "inherit" }}
+                  value={signerName}
+                  onChange={(e) => setSignerName(e.target.value)}
+                  placeholder="이름 입력"
+                />
+              )}
             </div>
 
             <div
               className="relative h-[180px] cursor-pointer overflow-hidden bg-white hover:bg-[#f0f9ff]"
               onClick={onSignatureClick}
             >
-              <div className="px-3 py-2 font-bold text-[14px] text-[#64748b] border-b border-dashed border-[#e2e8f0] pointer-events-none text-left">
+              <div className="pointer-events-none border-b border-dashed border-[#e2e8f0] px-3 py-2 text-left text-[14px] font-bold text-[#64748b]">
                 확인자 (서명)
               </div>
-              <div
-                className="flex h-[132px] w-full items-center justify-center overflow-hidden"
-                data-confirm-signature-box="1"
-              >
+              <div className="flex h-[132px] w-full items-center justify-center overflow-hidden">
                 {signatureDataUrl ? (
                   <img
                     src={signatureDataUrl}
                     alt="서명"
                     className="max-h-[90%] max-w-[90%] object-contain"
-                    data-confirm-signature-image="1"
                   />
-                ) : (
-                  <span
-                    data-html2canvas-ignore="true"
-                    className="rounded bg-white/80 px-2 py-1 text-sm font-bold text-[#94a3b8]"
-                  >
+                ) : !isCapturing ? (
+                  <span className="rounded bg-white/80 px-2 py-1 text-sm font-bold text-[#94a3b8]">
                     서명하려면 터치
                   </span>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
 
-          <div className="mt-10 flex justify-center items-end gap-2">
-            <input
-              type="text"
-              className="w-[300px] border-b-2 border-black bg-transparent px-0 py-0.5 text-center text-[24px] font-extrabold leading-tight outline-none"
-              style={{ fontFamily: "inherit" }}
-              value={recipient}
-              onChange={(e) => {
-                const next = e.target.value;
-                setRecipient(next);
-                setOrg(next);
-              }}
-              placeholder="회사명"
-            />
-            <input
-              type="text"
-              className="w-[60px] border-none bg-transparent px-0 py-0.5 text-left text-[20px] font-bold leading-tight outline-none"
-              style={{ fontFamily: "inherit" }}
-              value={suffix}
-              onChange={(e) => setSuffix(e.target.value)}
-            />
+          <div className="mt-10 flex items-end justify-center gap-2">
+            {isCapturing ? (
+              <CaptureField
+                className="w-[300px] border-b-2 border-black bg-transparent px-0 py-0.5 text-center text-[24px] font-extrabold leading-tight"
+                style={{ fontFamily: "inherit" }}
+                value={recipient}
+              />
+            ) : (
+              <input
+                type="text"
+                className="w-[300px] border-b-2 border-black bg-transparent px-0 py-0.5 text-center text-[24px] font-extrabold leading-tight outline-none"
+                style={{ fontFamily: "inherit" }}
+                value={recipient}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setRecipient(next);
+                  setOrg(next);
+                }}
+                placeholder="회사명"
+              />
+            )}
+            {isCapturing ? (
+              <CaptureField
+                className="w-[60px] border-none bg-transparent px-0 py-0.5 text-left text-[20px] font-bold leading-tight"
+                style={{ fontFamily: "inherit" }}
+                value={suffix}
+              />
+            ) : (
+              <input
+                type="text"
+                className="w-[60px] border-none bg-transparent px-0 py-0.5 text-left text-[20px] font-bold leading-tight outline-none"
+                style={{ fontFamily: "inherit" }}
+                value={suffix}
+                onChange={(e) => setSuffix(e.target.value)}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -397,7 +466,7 @@ DocumentForm.displayName = "ConfirmDocumentForm";
 
 const Th = ({ children }: { children: React.ReactNode }) => (
   <th
-    className="bg-[#f8fafc] font-extrabold text-center text-[16px] text-[#334155]"
+    className="bg-[#f8fafc] text-center text-[16px] font-extrabold text-[#334155]"
     style={{
       border: "1px solid #1e293b",
       padding: 8,
@@ -422,14 +491,25 @@ const SectionBlock = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div
-    className={`p-[15px] flex flex-col mb-5 ${className}`}
-    style={{ border: "2px solid #1e293b" }}
-  >
-    <div className="text-[18px] font-extrabold text-[#1e293b] mb-3 pl-3 border-l-[5px] border-[#475569]">
+  <div className={`mb-5 flex flex-col p-[15px] ${className}`} style={{ border: "2px solid #1e293b" }}>
+    <div className="mb-3 border-l-[5px] border-[#475569] pl-3 text-[18px] font-extrabold text-[#1e293b]">
       {title}
     </div>
     {children}
+  </div>
+);
+
+const CaptureField = ({
+  value,
+  className,
+  style,
+}: {
+  value: string;
+  className: string;
+  style?: React.CSSProperties;
+}) => (
+  <div className={className} style={style}>
+    {value || "\u00A0"}
   </div>
 );
 
@@ -437,10 +517,12 @@ const AutoTextarea = ({
   value,
   onChange,
   placeholder,
+  isCapturing,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
+  isCapturing: boolean;
 }) => {
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -451,11 +533,26 @@ const AutoTextarea = ({
     }
   }, [value]);
 
+  if (isCapturing) {
+    return (
+      <CaptureField
+        className="w-full border-none bg-transparent text-[16px] font-semibold text-black whitespace-pre-wrap break-words"
+        style={{
+          fontFamily: "inherit",
+          minHeight: 24,
+          lineHeight: 1.4,
+          padding: 2,
+        }}
+        value={value}
+      />
+    );
+  }
+
   return (
     <textarea
       ref={ref}
       rows={1}
-      className="w-full border-none bg-transparent text-[16px] font-semibold text-black outline-none resize-none overflow-hidden"
+      className="w-full resize-none overflow-hidden border-none bg-transparent text-[16px] font-semibold text-black outline-none"
       style={{
         fontFamily: "inherit",
         minHeight: 24,
@@ -468,4 +565,3 @@ const AutoTextarea = ({
     />
   );
 };
-
