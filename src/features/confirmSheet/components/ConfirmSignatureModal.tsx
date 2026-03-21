@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import SignaturePad from "signature_pad";
 import { Eraser, ImagePlus, PenTool, Trash2, Undo2, X } from "lucide-react";
 
@@ -8,15 +8,21 @@ interface ConfirmSignatureModalProps {
   onApply: (dataUrl: string) => void;
 }
 
+type BackgroundImage = {
+  img: HTMLImageElement;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
 export default function ConfirmSignatureModal({ open, onClose, onApply }: ConfirmSignatureModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const padRef = useRef<SignaturePad | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tool, setTool] = useState<"pen" | "eraser">("pen");
-  const [backgroundImages, setBackgroundImages] = useState<
-    { img: HTMLImageElement; x: number; y: number; w: number; h: number }[]
-  >([]);
+  const [backgroundImages, setBackgroundImages] = useState<BackgroundImage[]>([]);
 
   const [editMode, setEditMode] = useState(false);
   const [editImgSrc, setEditImgSrc] = useState("");
@@ -26,17 +32,61 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
   const [editOffset, setEditOffset] = useState({ x: 0, y: 0 });
   const editDragRef = useRef({ dragging: false, startX: 0, startY: 0, baseX: 0, baseY: 0 });
 
-  const redrawBgs = (
-    canvas: HTMLCanvasElement,
-    imgs: { img: HTMLImageElement; x: number; y: number; w: number; h: number }[],
-  ) => {
-    const ctx = canvas.getContext("2d")!;
-    const prev = ctx.globalCompositeOperation;
+  const getRatio = () => Math.max(window.devicePixelRatio || 1, 1);
+
+  const trimCanvas = (sourceCanvas: HTMLCanvasElement) => {
+    const ctx = sourceCanvas.getContext("2d");
+    if (!ctx) return sourceCanvas;
+
+    const { width, height } = sourceCanvas;
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    let top = height;
+    let left = width;
+    let right = -1;
+    let bottom = -1;
+
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        if (data[(y * width + x) * 4 + 3] === 0) continue;
+        if (x < left) left = x;
+        if (x > right) right = x;
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+      }
+    }
+
+    if (right < left || bottom < top) {
+      return sourceCanvas;
+    }
+
+    const trimmed = document.createElement("canvas");
+    trimmed.width = right - left + 1;
+    trimmed.height = bottom - top + 1;
+    const trimmedCtx = trimmed.getContext("2d");
+    if (!trimmedCtx) return sourceCanvas;
+
+    trimmedCtx.putImageData(
+      ctx.getImageData(left, top, trimmed.width, trimmed.height),
+      0,
+      0,
+    );
+
+    return trimmed;
+  };
+
+  const redrawBgs = (canvas: HTMLCanvasElement, imgs: BackgroundImage[]) => {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const ratio = getRatio();
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = "destination-over";
     imgs.forEach((item) => {
-      ctx.drawImage(item.img, item.x, item.y, item.w, item.h);
+      ctx.drawImage(item.img, item.x * ratio, item.y * ratio, item.w * ratio, item.h * ratio);
     });
-    ctx.globalCompositeOperation = prev;
+    ctx.restore();
   };
 
   const resizeCanvas = useCallback(() => {
@@ -45,7 +95,7 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
     const pad = padRef.current;
     if (!canvas || !container || !pad) return;
 
-    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const ratio = getRatio();
     const w = container.clientWidth;
     const h = container.clientHeight;
     if (canvas.width === w * ratio && canvas.height === h * ratio) return;
@@ -53,10 +103,17 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
     const data = pad.toData();
     canvas.width = w * ratio;
     canvas.height = h * ratio;
-    canvas.getContext("2d")!.scale(ratio, ratio);
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(ratio, ratio);
+
     pad.clear();
     redrawBgs(canvas, backgroundImages);
-    pad.fromData(data);
+    if (data.length > 0) {
+      pad.fromData(data);
+    }
   }, [backgroundImages]);
 
   useEffect(() => {
@@ -72,7 +129,7 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
       });
     }
 
-    setTimeout(() => resizeCanvas(), 100);
+    window.setTimeout(() => resizeCanvas(), 100);
   }, [open, resizeCanvas]);
 
   useEffect(() => {
@@ -89,13 +146,21 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
   }, [tool]);
 
   const handleUndo = () => {
-    if (!padRef.current) return;
-    const data = padRef.current.toData();
+    const canvas = canvasRef.current;
+    const pad = padRef.current;
+    if (!canvas || !pad) return;
+
+    const data = pad.toData();
     if (data.length > 0) {
       data.pop();
-      padRef.current.fromData(data);
+      pad.clear();
+      redrawBgs(canvas, backgroundImages);
+      pad.fromData(data);
     } else if (backgroundImages.length > 0) {
-      setBackgroundImages((prev) => prev.slice(0, -1));
+      const nextBgs = backgroundImages.slice(0, -1);
+      setBackgroundImages(nextBgs);
+      pad.clear();
+      redrawBgs(canvas, nextBgs);
     }
   };
 
@@ -103,26 +168,30 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
     if (!confirm("모두 지우시겠습니까?")) return;
     padRef.current?.clear();
     setBackgroundImages([]);
+    setEditMode(false);
+    setEditOffset({ x: 0, y: 0 });
     resizeCanvas();
   };
 
   const handleApply = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
     const pad = padRef.current;
-    if (pad?.isEmpty() && backgroundImages.length === 0) {
-      return;
-    }
-    const dataUrl = canvas.toDataURL("image/png");
+    if (!canvas) return;
+    if (pad?.isEmpty() && backgroundImages.length === 0) return;
+
+    const dataUrl = trimCanvas(canvas).toDataURL("image/png");
     onApply(dataUrl);
     pad?.clear();
     setBackgroundImages([]);
     setTool("pen");
+    setEditMode(false);
+    setEditOffset({ x: 0, y: 0 });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (ev) => {
       const img = new Image();
@@ -130,17 +199,26 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
         const c = document.createElement("canvas");
         const max = 800;
         let scale = 1;
-        if (img.width > max || img.height > max) scale = max / Math.max(img.width, img.height);
+        if (img.width > max || img.height > max) {
+          scale = max / Math.max(img.width, img.height);
+        }
         c.width = img.width * scale;
         c.height = img.height * scale;
-        const ctx = c.getContext("2d")!;
+        const ctx = c.getContext("2d");
+        if (!ctx) return;
+
         ctx.drawImage(img, 0, 0, c.width, c.height);
         const idata = ctx.getImageData(0, 0, c.width, c.height);
         const data = idata.data;
         for (let i = 0; i < data.length; i += 4) {
           const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-          if (avg > 200) data[i + 3] = 0;
-          else data[i] = data[i + 1] = data[i + 2] = 0;
+          if (avg > 200) {
+            data[i + 3] = 0;
+          } else {
+            data[i] = 0;
+            data[i + 1] = 0;
+            data[i + 2] = 0;
+          }
         }
         ctx.putImageData(idata, 0, 0);
         setEditImgSrc(c.toDataURL());
@@ -156,31 +234,19 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
 
   const handleEditApply = () => {
     const canvas = canvasRef.current;
+    const pad = padRef.current;
     const editImg = editImgRef.current;
     const editContainer = editContainerRef.current;
-    if (!canvas || !editImg || !editContainer) return;
+    if (!canvas || !pad || !editImg || !editContainer) return;
 
     const imgRect = editImg.getBoundingClientRect();
     const contRect = editContainer.getBoundingClientRect();
-
-    // 컨테이너 기준(화면 좌표)에서 위치/크기를 계산해 놓고,
-    // 캔버스는 devicePixelRatio 로 스케일되더라도 같은 비율로 맞도록 한다.
-    const imgCX = imgRect.left + imgRect.width / 2;
-    const imgCY = imgRect.top + imgRect.height / 2;
-    const contCX = contRect.left + contRect.width / 2;
-    const contCY = contRect.top + contRect.height / 2;
-
-    const relX = (imgCX - contCX) / contRect.width;
-    const relY = (imgCY - contCY) / contRect.height;
-
+    const xCss = imgRect.left - contRect.left;
+    const yCss = imgRect.top - contRect.top;
     const wCss = imgRect.width;
     const hCss = imgRect.height;
+    const signatureData = pad.toData();
 
-    const xCss = contCX + relX * contRect.width - wCss / 2;
-    const yCss = contCY + relY * contRect.height - hCss / 2;
-
-    // canvas 컨텍스트는 resize 시 ratio 만큼 스케일되므로,
-    // x/y/w/h 는 CSS 좌표계 기준 그대로 저장해 두었다가 redraw 시 동일하게 적용된다.
     const newImg = new Image();
     newImg.onload = () => {
       const newBgs = [
@@ -188,7 +254,11 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
         { img: newImg, x: xCss, y: yCss, w: wCss, h: hCss },
       ];
       setBackgroundImages(newBgs);
+      pad.clear();
       redrawBgs(canvas, newBgs);
+      if (signatureData.length > 0) {
+        pad.fromData(signatureData);
+      }
       setEditMode(false);
     };
     newImg.src = editImgSrc;
@@ -230,39 +300,39 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
       }}
     >
       <div
-        className="w-[95%] max-w-[600px] bg-white rounded-xl flex flex-col overflow-hidden"
-        style={{ height: "80vh", maxHeight: 800, boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}
+        className="flex h-[80vh] max-h-[800px] w-[95%] max-w-[600px] flex-col overflow-hidden rounded-xl bg-white"
+        style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}
       >
-        <div className="px-4 py-3 bg-[#f1f5f9] border-b border-[#e2e8f0] flex justify-between items-center">
-          <span className="font-extrabold text-[16px] text-[#1e293b]">서명 또는 도장 입력</span>
-          <button onClick={onClose} className="bg-transparent border-none cursor-pointer text-[#64748b]">
-            <X className="w-5 h-5" />
+        <div className="flex items-center justify-between border-b border-[#e2e8f0] bg-[#f1f5f9] px-4 py-3">
+          <span className="text-[16px] font-extrabold text-[#1e293b]">서명 또는 사진 입력</span>
+          <button onClick={onClose} className="cursor-pointer border-none bg-transparent text-[#64748b]">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         <div
           ref={containerRef}
-          className="flex-1 relative bg-white overflow-hidden"
+          className="relative flex-1 overflow-hidden bg-white"
           style={{
             touchAction: "none",
             backgroundImage: "radial-gradient(#e2e8f0 1px, transparent 1px)",
             backgroundSize: "20px 20px",
           }}
         >
-          <canvas ref={canvasRef} className="w-full h-full block" style={{ touchAction: "none" }} />
+          <canvas ref={canvasRef} className="block h-full w-full" style={{ touchAction: "none" }} />
 
           {editMode && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80">
               <div
                 ref={editContainerRef}
-                className="relative w-full h-full overflow-hidden border-2 border-dashed border-accent"
+                className="relative h-full w-full overflow-hidden border-2 border-dashed border-accent"
               >
                 <img
                   ref={editImgRef}
                   src={editImgSrc}
                   alt="Stamp"
                   draggable={false}
-                  className="absolute top-1/2 left-1/2 cursor-grab"
+                  className="absolute left-1/2 top-1/2 cursor-grab"
                   style={{
                     transform: `translate(-50%, -50%) translate(${editOffset.x}px, ${editOffset.y}px) scale(${editScale})`,
                     maxWidth: "none",
@@ -274,14 +344,14 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
                 />
               </div>
               <div
-                className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-4 items-center w-[90%] max-w-[400px]"
+                className="absolute bottom-5 left-1/2 flex w-[90%] max-w-[400px] -translate-x-1/2 items-center gap-4"
                 style={{
                   background: "#222",
                   borderRadius: 30,
                   padding: "10px 20px",
                 }}
               >
-                <span className="text-white text-xs whitespace-nowrap">크기</span>
+                <span className="whitespace-nowrap text-xs text-white">크기</span>
                 <input
                   type="range"
                   min="0.1"
@@ -300,29 +370,29 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
           )}
         </div>
 
-        <div className="px-[10px] py-[10px] bg-white border-t border-[#e2e8f0] flex gap-2 overflow-x-auto shrink-0 items-center">
+        <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-t border-[#e2e8f0] bg-white px-[10px] py-[10px]">
           <MiniBtn active={tool === "pen"} onClick={() => setTool("pen")}>
-            <PenTool className="w-[14px] h-[14px]" /> 펜
+            <PenTool className="h-[14px] w-[14px]" /> 펜
           </MiniBtn>
           <MiniBtn active={tool === "eraser"} onClick={() => setTool("eraser")} className="mr-[10px]">
-            <Eraser className="w-[14px] h-[14px]" /> 지우개
+            <Eraser className="h-[14px] w-[14px]" /> 지우개
           </MiniBtn>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 h-[40px] px-3 text-[13px] font-bold rounded-[10px] cursor-pointer mr-1"
+            className="mr-1 flex h-[40px] cursor-pointer items-center gap-2 rounded-[10px] px-3 text-[13px] font-bold"
             style={{
               backgroundColor: "#f1f5f9",
               border: "1px solid #cbd5e1",
               color: "#475569",
             }}
           >
-            <ImagePlus className="w-4 h-4" /> 도장/사진
+            <ImagePlus className="h-4 w-4" /> 도장/사진
           </button>
           <MiniBtn onClick={handleUndo}>
-            <Undo2 className="w-[14px] h-[14px]" />
+            <Undo2 className="h-[14px] w-[14px]" />
           </MiniBtn>
           <MiniBtn onClick={handleClear}>
-            <Trash2 className="w-[14px] h-[14px]" />
+            <Trash2 className="h-[14px] w-[14px]" />
           </MiniBtn>
           <input
             ref={fileInputRef}
@@ -333,17 +403,17 @@ export default function ConfirmSignatureModal({ open, onClose, onApply }: Confir
           />
         </div>
 
-        <div className="px-4 py-3 bg-white border-t border-[#e2e8f0] flex gap-[10px]">
+        <div className="flex gap-[10px] border-t border-[#e2e8f0] bg-white px-4 py-3">
           <button
             onClick={onClose}
-            className="flex-1 h-12 rounded-[10px] text-[15px] font-bold flex items-center justify-center cursor-pointer"
+            className="flex h-12 flex-1 cursor-pointer items-center justify-center rounded-[10px] text-[15px] font-bold"
             style={{ backgroundColor: "#f1f5f9", border: "1px solid #cbd5e1", color: "#475569" }}
           >
             취소
           </button>
           <button
             onClick={handleApply}
-            className="flex-1 h-12 rounded-[10px] text-[15px] font-bold flex items-center justify-center cursor-pointer border-none text-white"
+            className="flex h-12 flex-1 cursor-pointer items-center justify-center rounded-[10px] border-none text-[15px] font-bold text-white"
             style={{ backgroundColor: "#1a254f" }}
           >
             서명 완료
@@ -360,14 +430,14 @@ const MiniBtn = ({
   active = false,
   className = "",
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   onClick?: () => void;
   active?: boolean;
   className?: string;
 }) => (
   <button
     onClick={onClick}
-    className={`text-xs px-3 py-1.5 rounded-md font-bold flex items-center gap-1 whitespace-nowrap h-[40px] justify-center cursor-pointer ${className}`}
+    className={`flex h-[40px] cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-bold ${className}`}
     style={{
       border: `1px solid ${active ? "#2563eb" : "#cbd5e1"}`,
       background: active ? "#eff6ff" : "#fff",
@@ -377,4 +447,3 @@ const MiniBtn = ({
     {children}
   </button>
 );
-

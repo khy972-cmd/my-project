@@ -99,7 +99,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         replacement.style.lineHeight = fieldHeight;
         replacement.style.whiteSpace = "nowrap";
         replacement.style.wordBreak = "keep-all";
-        replacement.style.transform = "translateY(-12%)";
+        replacement.style.transform = "translateY(-2px)";
       }
 
       replacement.textContent = nextValue || "\u00A0";

@@ -407,16 +407,9 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
               </div>
               <div className="flex h-[132px] w-full items-center justify-center overflow-hidden">
                 {signatureDataUrl ? (
-                  <div
-                    style={{
-                      width: "90%",
-                      height: "90%",
-                      backgroundImage: `url(${signatureDataUrl})`,
-                      backgroundSize: "contain",
-                      backgroundPosition: "center",
-                      backgroundRepeat: "no-repeat",
-                    }}
-                  />
+                  <div className="h-[90%] w-[90%]">
+                    <img src={signatureDataUrl} alt="서명" className="h-full w-full object-contain" />
+                  </div>
                 ) : (
                   <span
                     data-html2canvas-ignore="true"
@@ -433,14 +426,14 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             {isCapturing ? (
               <CaptureField
                 className="w-[300px] border-b-2 border-black bg-transparent px-0 py-0.5 text-center text-[24px] font-extrabold leading-tight"
-                style={{ fontFamily: "inherit" }}
+                style={{ fontFamily: "inherit", lineHeight: 1.1 }}
                 value={recipient}
               />
             ) : (
               <input
                 type="text"
                 className="w-[300px] border-b-2 border-black bg-transparent px-0 py-0.5 text-center text-[24px] font-extrabold leading-tight outline-none"
-                style={{ fontFamily: "inherit" }}
+                style={{ fontFamily: "inherit", lineHeight: 1.1 }}
                 value={recipient}
                 onChange={(e) => {
                   const next = e.target.value;
