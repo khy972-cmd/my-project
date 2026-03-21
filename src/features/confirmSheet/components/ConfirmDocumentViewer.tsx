@@ -422,18 +422,18 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             </div>
           </div>
 
-          <div className="mt-10 flex items-end justify-center gap-2">
+          <div className="mt-10 flex items-center justify-end gap-2 pr-4 pt-4">
             {isCapturing ? (
               <CaptureField
-                className="w-[300px] border-b-2 border-black bg-transparent px-0 py-0.5 text-center text-[24px] font-extrabold leading-tight"
-                style={{ fontFamily: "inherit", lineHeight: 1.1 }}
+                className="w-[300px] border-b-2 border-black bg-transparent px-0 text-center text-[24px] font-extrabold"
+                style={{ fontFamily: "inherit", lineHeight: 1.2 }}
                 value={recipient}
               />
             ) : (
               <input
                 type="text"
-                className="w-[300px] border-b-2 border-black bg-transparent px-0 py-0.5 text-center text-[24px] font-extrabold leading-tight outline-none"
-                style={{ fontFamily: "inherit", lineHeight: 1.1 }}
+                className="w-[300px] border-b-2 border-black bg-transparent px-0 text-center text-[24px] font-extrabold outline-none"
+                style={{ fontFamily: "inherit", lineHeight: 1.2 }}
                 value={recipient}
                 onChange={(e) => {
                   const next = e.target.value;
@@ -445,15 +445,15 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             )}
             {isCapturing ? (
               <CaptureField
-                className="w-[60px] border-none bg-transparent px-0 py-0.5 text-left text-[20px] font-bold leading-tight"
-                style={{ fontFamily: "inherit" }}
+                className="recipient-suffix w-[60px] border-none bg-transparent px-0 text-left text-[20px] font-bold"
+                style={{ fontFamily: "inherit", lineHeight: 1.2 }}
                 value={suffix}
               />
             ) : (
               <input
                 type="text"
-                className="w-[60px] border-none bg-transparent px-0 py-0.5 text-left text-[20px] font-bold leading-tight outline-none"
-                style={{ fontFamily: "inherit" }}
+                className="recipient-suffix w-[60px] border-none bg-transparent px-0 text-left text-[20px] font-bold outline-none"
+                style={{ fontFamily: "inherit", lineHeight: 1.2 }}
                 value={suffix}
                 onChange={(e) => setSuffix(e.target.value)}
               />

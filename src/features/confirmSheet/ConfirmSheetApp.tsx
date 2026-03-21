@@ -95,6 +95,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         replacement.style.margin = "0px";
         replacement.style.height = fieldHeight;
         replacement.style.lineHeight = fieldHeight;
+        replacement.style.textAlign = styles.textAlign;
         replacement.style.whiteSpace = "nowrap";
         replacement.style.wordBreak = "keep-all";
         replacement.style.overflow = "visible";
