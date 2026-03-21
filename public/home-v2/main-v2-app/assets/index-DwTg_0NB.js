@@ -20369,16 +20369,17 @@ function Fk() {
             c.jsxs('div', {
               children: [
                 c.jsxs('div', {
-                  className: 'mb-3',
+                  className: 'mb-2.5',
                   children: [
                     c.jsx('label', {
-                      className: 'mb-2 block text-[15px] font-bold text-muted-foreground',
+                      className: 'mb-2 block text-[14px] font-bold text-muted-foreground',
                       children: '작업자를 선택해주세요',
                     }),
                     c.jsxs('div', {
                       className: 'relative',
                       children: [
                         c.jsx('input', {
+                          id: 'assistant-worker-input',
                           type: 'text',
                           value: workerQuery || a.worker || '',
                           onChange: C => {
@@ -20394,17 +20395,53 @@ function Fk() {
                           },
                           placeholder: '기본값은 접속자 본인입니다',
                           className:
-                            'h-[50px] w-full rounded-xl border border-border bg-card px-4 pr-10 text-[15px] font-medium outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20',
+                            'h-[46px] w-full rounded-lg border border-border bg-card px-3 pr-[84px] text-[14px] font-medium outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20',
                         }),
-                        c.jsx('button', {
-                          type: 'button',
-                          onMouseDown: C => {
-                            C.preventDefault()
-                            setWorkerDropdownOpen(_ => !_)
-                          },
-                          className:
-                            'absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent',
-                          children: '⌄',
+                        c.jsxs('div', {
+                          className: 'absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1',
+                          children: [
+                            !!workerQuery.trim() &&
+                              c.jsx('button', {
+                                type: 'button',
+                                onMouseDown: C => {
+                                  C.preventDefault()
+                                  ;(setWorkerQuery(''),
+                                    setWorkerDropdownOpen(!0),
+                                    u(B => ({ ...B, worker: (a.worker || '').trim() })))
+                                  window.requestAnimationFrame(() => {
+                                    var _
+                                    ;(_ = document.getElementById('assistant-worker-input')) == null || _.focus()
+                                  })
+                                },
+                                className:
+                                  'flex h-7 w-7 items-center justify-center rounded-md text-[16px] font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
+                                'aria-label': '검색어 지우기',
+                                children: '×',
+                              }),
+                            c.jsx('button', {
+                              type: 'button',
+                              onMouseDown: C => {
+                                C.preventDefault()
+                                setWorkerDropdownOpen(_ => !_)
+                              },
+                              className:
+                                'flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
+                              'aria-label': workerDropdownOpen ? '작업자 목록 닫기' : '작업자 목록 열기',
+                              children: c.jsx('svg', {
+                                xmlns: 'http://www.w3.org/2000/svg',
+                                width: '24',
+                                height: '24',
+                                viewBox: '0 0 24 24',
+                                fill: 'none',
+                                stroke: 'currentColor',
+                                strokeWidth: '2',
+                                strokeLinecap: 'round',
+                                strokeLinejoin: 'round',
+                                className: `h-5 w-5 transition-transform ${workerDropdownOpen ? 'rotate-180' : ''}`,
+                                children: c.jsx('path', { d: 'm6 9 6 6 6-6' }),
+                              }),
+                            }),
+                          ],
                         }),
                         workerDropdownOpen &&
                           c.jsx('div', {
@@ -20420,7 +20457,7 @@ function Fk() {
                                         onMouseDown: _ => {
                                           ;(_.preventDefault(), setWorkerDropdownOpen(!1), re(C))
                                         },
-                                        className: `mb-1 flex h-[46px] w-full items-center rounded-lg px-3 text-left text-[14px] font-semibold transition-all last:mb-0 ${((a.worker || '').trim() || (workerQuery || '').trim()) === C ? 'bg-primary-bg text-primary' : 'text-foreground hover:bg-primary-bg'}`,
+                                        className: `mb-1 flex h-[42px] w-full items-center rounded-lg px-3 text-left text-[14px] font-semibold transition-all last:mb-0 ${((a.worker || '').trim() || (workerQuery || '').trim()) === C ? 'bg-primary-bg text-primary' : 'text-foreground hover:bg-primary-bg'}`,
                                         children: C,
                                       },
                                       C
@@ -20436,8 +20473,8 @@ function Fk() {
                   ],
                 }),
                 c.jsx('div', {
-                  className: 'mb-3 text-center text-[13px] text-muted-foreground',
-                  children: '기존 작업자 데이터를 그대로 검색하며, 목록에 없으면 직접 입력할 수 있습니다',
+                  className: 'mb-3 text-center text-[12px] text-muted-foreground',
+                  children: '검색어를 지우면 본인 기본값으로 돌아가고, 목록이 다시 펼쳐집니다',
                 }),
                 c.jsx('button', {
                   onClick: workerSubmit,
