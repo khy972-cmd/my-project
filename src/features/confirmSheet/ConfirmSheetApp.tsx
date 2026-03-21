@@ -85,6 +85,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         replacement.style.whiteSpace = "pre-wrap";
         replacement.style.wordBreak = "break-word";
       } else {
+        // 단일 input: html2canvas 폰트 쏠림 방지를 위한 수직 중앙 강제 고정
         replacement.style.display = "flex";
         replacement.style.alignItems = "center";
         replacement.style.justifyContent =
@@ -95,9 +96,12 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
               : "flex-start";
         replacement.style.padding = "0px";
         replacement.style.margin = "0px";
-        replacement.style.transform = "translateY(-2.5px)";
-        replacement.style.lineHeight = fieldHeight;
+        replacement.style.height = fieldHeight;
+        replacement.style.lineHeight = "1";
         replacement.style.whiteSpace = "nowrap";
+        replacement.style.wordBreak = "keep-all";
+        replacement.style.overflow = "visible";
+        replacement.style.transform = "translateY(-5px)";
       }
 
       replacement.textContent = nextValue || "\u00A0";
