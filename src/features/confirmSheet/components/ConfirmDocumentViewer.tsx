@@ -358,14 +358,14 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
               <span className="text-[18px] font-extrabold text-[#334155]">소 속 :</span>
               {isCapturing ? (
                 <CaptureField
-                  className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight"
+                  className="w-full bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight"
                   style={{ fontFamily: "inherit" }}
                   value={org}
                 />
               ) : (
                 <input
                   type="text"
-                  className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight outline-none"
+                  className="w-full bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight outline-none"
                   style={{ fontFamily: "inherit" }}
                   value={org}
                   onChange={(e) => {
@@ -382,14 +382,14 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
               <span className="text-[18px] font-extrabold text-[#334155]">성 명 :</span>
               {isCapturing ? (
                 <CaptureField
-                  className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight"
+                  className="w-full bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight"
                   style={{ fontFamily: "inherit" }}
                   value={signerName}
                 />
               ) : (
                 <input
                   type="text"
-                  className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight outline-none"
+                  className="w-full bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight outline-none"
                   style={{ fontFamily: "inherit" }}
                   value={signerName}
                   onChange={(e) => setSignerName(e.target.value)}
@@ -422,7 +422,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             </div>
           </div>
 
-          <div className="mt-10 flex items-center justify-end gap-2 pr-4 pt-4">
+          <div className="mt-10 flex items-center justify-center gap-2 pt-4">
             {isCapturing ? (
               <CaptureField
                 className="w-[300px] border-b-2 border-black bg-transparent px-0 text-center text-[24px] font-extrabold"

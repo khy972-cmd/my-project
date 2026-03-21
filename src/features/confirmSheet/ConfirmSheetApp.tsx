@@ -90,17 +90,22 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         replacement.style.overflowWrap = "anywhere";
       } else {
         // 단일 input: html2canvas 폰트 쏠림 방지를 위한 수직 중앙 강제 고정
-        replacement.style.display = "block";
+        replacement.style.display = "flex";
+        replacement.style.alignItems = "center";
+        replacement.style.justifyContent =
+          styles.textAlign === "center"
+            ? "center"
+            : styles.textAlign === "right"
+              ? "flex-end"
+              : "flex-start";
         replacement.style.padding = "0px";
         replacement.style.margin = "0px";
         replacement.style.height = fieldHeight;
-        replacement.style.lineHeight = fieldHeight;
-        replacement.style.textAlign = styles.textAlign;
+        replacement.style.lineHeight = "1";
         replacement.style.whiteSpace = "nowrap";
-        replacement.style.wordBreak = "keep-all";
         replacement.style.overflow = "visible";
         replacement.style.position = "relative";
-        replacement.style.top = "-5px";
+        replacement.style.top = "-9px";
       }
 
       replacement.textContent = nextValue || "\u00A0";
@@ -160,6 +165,9 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         scrollY: 0,
         onclone: (clonedDoc) => {
           clonedDoc.querySelectorAll('[data-html2canvas-ignore="true"]').forEach((el) => el.remove());
+          clonedDoc.querySelectorAll("input, div").forEach((el) => {
+            (el as HTMLElement).style.letterSpacing = "-0.02em";
+          });
           fixCaptureFields(source, clonedDoc);
         },
       });
