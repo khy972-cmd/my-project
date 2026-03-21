@@ -15,6 +15,7 @@ interface ConfirmDocumentViewerProps {
   signatureDataUrl: string | null;
   onSignatureClick: () => void;
   onZoomChange?: (nextZoom: number) => void;
+  resetKey?: number;
 }
 
 export default function ConfirmDocumentViewer({
@@ -25,13 +26,27 @@ export default function ConfirmDocumentViewer({
   signatureDataUrl,
   onSignatureClick,
   onZoomChange,
+  resetKey,
 }: ConfirmDocumentViewerProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const dragRef = useRef({ dragging: false, startX: 0, startY: 0, baseX: 0, baseY: 0 });
+  const touchRef = useRef<{
+    mode: "pan" | "pinch";
+    x: number;
+    y: number;
+    pinchDistance?: number;
+    pinchZoom?: number;
+  } | null>(null);
 
   const clampZoom = (value: number) => Math.min(3, Math.max(0.3, value));
+
+  useEffect(() => {
+    setOffset({ x: 0, y: 0 });
+    dragRef.current.dragging = false;
+    touchRef.current = null;
+  }, [resetKey]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isPanning) return;
@@ -63,34 +78,86 @@ export default function ConfirmDocumentViewer({
 
   const handleWheel = (e: React.WheelEvent) => {
     if (!onZoomChange) return;
-    // 트랙패드/마우스 휠로 부드럽게 확대/축소
     e.preventDefault();
-    const delta = e.deltaY;
-    const step = delta < 0 ? 0.08 : -0.08;
+    const step = e.deltaY < 0 ? 0.1 : -0.1;
     onZoomChange(clampZoom(zoom + step));
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length >= 2) {
+      const [a, b] = e.touches;
+      const dx = a.clientX - b.clientX;
+      const dy = a.clientY - b.clientY;
+      touchRef.current = {
+        mode: "pinch",
+        x: 0,
+        y: 0,
+        pinchDistance: Math.hypot(dx, dy),
+        pinchZoom: zoom,
+      };
+      return;
+    }
+
+    if (!isPanning || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchRef.current = {
+      mode: "pan",
+      x: touch.clientX,
+      y: touch.clientY,
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchRef.current) return;
+
+    if (touchRef.current.mode === "pinch" && e.touches.length >= 2) {
+      const [a, b] = e.touches;
+      const dx = a.clientX - b.clientX;
+      const dy = a.clientY - b.clientY;
+      const distance = Math.hypot(dx, dy);
+      const baseDistance = touchRef.current.pinchDistance || distance;
+      const baseZoom = touchRef.current.pinchZoom || zoom;
+      e.preventDefault();
+      onZoomChange?.(clampZoom((baseZoom * distance) / baseDistance));
+      return;
+    }
+
+    if (touchRef.current.mode !== "pan" || !isPanning || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchRef.current.x;
+    const dy = touch.clientY - touchRef.current.y;
+    touchRef.current = { ...touchRef.current, x: touch.clientX, y: touch.clientY };
+    e.preventDefault();
+    setOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
+  };
+
+  const handleTouchEnd = () => {
+    touchRef.current = null;
   };
 
   return (
     <div
       ref={viewportRef}
-      className="flex-1 relative overflow-hidden flex items-center justify-center"
+      className="mx-auto flex min-h-full w-full items-start justify-center px-3 py-5 sm:px-5"
       style={{
-        marginTop: 60,
         cursor: isPanning ? "grab" : "default",
-        // 이동 모드가 아닐 때는 브라우저 기본 핀치-줌을 허용
         touchAction: isPanning ? "none" : "pan-x pan-y",
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <div
         ref={wrapperRef}
-        className="origin-center transition-transform duration-75"
+        className="origin-top transition-transform duration-75"
         style={{
           transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
           boxShadow: "0 4px 30px rgba(0,0,0,0.5)",
+          willChange: "transform",
         }}
       >
         <DocumentForm
