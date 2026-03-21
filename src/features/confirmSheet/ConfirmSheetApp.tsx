@@ -67,41 +67,39 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       replacement.style.boxSizing = "border-box";
       replacement.style.width = fieldWidth;
       replacement.style.height = fieldHeight;
+      replacement.style.minHeight = fieldHeight;
       replacement.style.background = "transparent";
       replacement.style.color = styles.color;
       replacement.style.fontFamily = styles.fontFamily;
       replacement.style.fontSize = styles.fontSize;
       replacement.style.fontWeight = styles.fontWeight;
-      replacement.style.textAlign = styles.textAlign;
       replacement.style.border = styles.border;
-      replacement.style.borderBottom = styles.borderBottom;
+      replacement.style.borderRadius = styles.borderRadius;
       replacement.style.letterSpacing = styles.letterSpacing;
+      replacement.style.overflow = "visible";
 
       if (isTextArea) {
         replacement.style.display = "block";
         replacement.style.padding = styles.padding;
         replacement.style.margin = styles.margin;
         replacement.style.lineHeight = styles.lineHeight;
+        replacement.style.textAlign = styles.textAlign;
+        replacement.style.verticalAlign = styles.verticalAlign;
         replacement.style.whiteSpace = "pre-wrap";
         replacement.style.wordBreak = "break-word";
+        replacement.style.overflowWrap = "anywhere";
       } else {
         // 단일 input: html2canvas 폰트 쏠림 방지를 위한 수직 중앙 강제 고정
-        replacement.style.display = "flex";
-        replacement.style.alignItems = "center";
-        replacement.style.justifyContent =
-          styles.textAlign === "center"
-            ? "center"
-            : styles.textAlign === "right"
-              ? "flex-end"
-              : "flex-start";
+        replacement.style.display = "block";
         replacement.style.padding = "0px";
         replacement.style.margin = "0px";
         replacement.style.height = fieldHeight;
-        replacement.style.lineHeight = "1";
+        replacement.style.lineHeight = fieldHeight;
         replacement.style.whiteSpace = "nowrap";
         replacement.style.wordBreak = "keep-all";
         replacement.style.overflow = "visible";
-        replacement.style.transform = "translateY(-5px)";
+        replacement.style.position = "relative";
+        replacement.style.top = "-5px";
       }
 
       replacement.textContent = nextValue || "\u00A0";
