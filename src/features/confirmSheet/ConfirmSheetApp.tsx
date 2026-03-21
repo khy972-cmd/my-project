@@ -46,10 +46,6 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
   const fixCaptureFields = (clonedDoc: Document) => {
     const root = clonedDoc.querySelector('[data-confirm-capture-root="1"]') as HTMLElement | null;
     if (!root) return;
-    const parsePx = (value?: string | null, fallback = 0) => {
-      const next = Number.parseFloat(value || "");
-      return Number.isFinite(next) ? next : fallback;
-    };
 
     root.querySelectorAll("table").forEach((table) => {
       const el = table as HTMLElement;
@@ -69,35 +65,14 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       const el = field as HTMLInputElement | HTMLTextAreaElement;
       const styles = clonedDoc.defaultView?.getComputedStyle(el);
       const replacement = clonedDoc.createElement("div");
-      const content = clonedDoc.createElement("span");
       const isTextArea = el.tagName === "TEXTAREA";
       const textAlign = styles?.textAlign || "left";
-      const fontSize = parsePx(styles?.fontSize, 16);
-      const paddingLeft = styles?.paddingLeft || "0px";
-      const paddingRight = styles?.paddingRight || "0px";
-      const paddingTop = parsePx(styles?.paddingTop, isTextArea ? 2 : 0);
-      const paddingBottom = parsePx(styles?.paddingBottom, isTextArea ? 2 : 0);
-      const borderTop = parsePx(styles?.borderTopWidth, 0);
-      const borderBottom = parsePx(styles?.borderBottomWidth, 0);
-      const boxHeight = el.clientHeight || parsePx(styles?.height, fontSize + paddingTop + paddingBottom + borderTop + borderBottom);
-      const minHeight = parsePx(styles?.minHeight, boxHeight || fontSize);
-      const resolvedLineHeight =
-        styles?.lineHeight && styles.lineHeight !== "normal" ? styles.lineHeight : `${Math.round(fontSize * 1.4)}px`;
-      const lineHeightPx = parsePx(resolvedLineHeight, Math.round(fontSize * 1.4));
-      const verticalCenterPadding = Math.max(0, Math.round((Math.max(boxHeight, minHeight) - borderTop - borderBottom - lineHeightPx) / 2));
-
       replacement.style.boxSizing = "border-box";
-      replacement.style.display = "flex";
-      replacement.style.flexDirection = "row";
-      replacement.style.justifyContent = "flex-start";
-      replacement.style.alignItems = "stretch";
+      replacement.style.display = "block";
       replacement.style.width = styles?.width || "100%";
-      replacement.style.minHeight = `${Math.max(minHeight, boxHeight || fontSize)}px`;
-      replacement.style.height = !isTextArea && boxHeight > 0 ? `${boxHeight}px` : "auto";
-      replacement.style.paddingTop = isTextArea ? `${paddingTop}px` : `${verticalCenterPadding}px`;
-      replacement.style.paddingBottom = isTextArea ? `${paddingBottom}px` : `${verticalCenterPadding}px`;
-      replacement.style.paddingLeft = paddingLeft;
-      replacement.style.paddingRight = paddingRight;
+      replacement.style.minHeight = styles?.minHeight || `${el.clientHeight || 24}px`;
+      replacement.style.height = !isTextArea ? styles?.height || `${el.clientHeight || 24}px` : "auto";
+      replacement.style.padding = styles?.padding || "0";
       replacement.style.margin = styles?.margin || "0";
       replacement.style.border = styles?.border || "none";
       replacement.style.borderTop = styles?.borderTop || "none";
@@ -110,27 +85,15 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       replacement.style.fontFamily = styles?.fontFamily || "inherit";
       replacement.style.fontSize = styles?.fontSize || "16px";
       replacement.style.fontWeight = styles?.fontWeight || "600";
-      replacement.style.lineHeight = resolvedLineHeight;
+      replacement.style.lineHeight = styles?.lineHeight || "1.4";
       replacement.style.letterSpacing = styles?.letterSpacing || "normal";
       replacement.style.textAlign = textAlign;
+      replacement.style.verticalAlign = styles?.verticalAlign || "middle";
+      replacement.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
+      replacement.style.wordBreak = isTextArea ? "break-word" : "keep-all";
+      replacement.style.overflowWrap = isTextArea ? "anywhere" : "normal";
       replacement.style.overflow = "hidden";
-
-      content.textContent = el.value || "";
-      content.style.display = "block";
-      content.style.width = "100%";
-      content.style.color = "inherit";
-      content.style.fontFamily = "inherit";
-      content.style.fontSize = "inherit";
-      content.style.fontWeight = "inherit";
-      content.style.letterSpacing = "inherit";
-      content.style.textAlign = textAlign;
-      content.style.lineHeight = isTextArea ? resolvedLineHeight : `${lineHeightPx}px`;
-      content.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
-      content.style.wordBreak = isTextArea ? "break-word" : "keep-all";
-      content.style.overflowWrap = isTextArea ? "anywhere" : "normal";
-      content.style.transform = "translateY(0)";
-
-      replacement.appendChild(content);
+      replacement.textContent = el.value || "";
 
       el.parentNode?.replaceChild(replacement, el);
     });
