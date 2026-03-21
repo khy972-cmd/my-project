@@ -337,21 +337,24 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             </div>
 
             <div
-              className="relative bg-white h-[180px] flex flex-col overflow-hidden cursor-pointer hover:bg-[#f0f9ff]"
+              className="relative h-[180px] cursor-pointer overflow-hidden bg-white hover:bg-[#f0f9ff]"
               onClick={onSignatureClick}
             >
               <div className="px-3 py-2 font-bold text-[14px] text-[#64748b] border-b border-dashed border-[#e2e8f0] pointer-events-none text-left">
                 확인자 (서명)
               </div>
-              <div className="flex-1 w-full relative flex items-center justify-center">
+              <div className="relative h-[132px] w-full overflow-hidden">
                 {signatureDataUrl ? (
                   <img
                     src={signatureDataUrl}
                     alt="서명"
-                    className="block max-w-[90%] max-h-[90%] object-contain"
+                    className="absolute left-1/2 top-1/2 max-h-[90%] max-w-[90%] -translate-x-1/2 -translate-y-1/2 object-contain"
                   />
                 ) : (
-                  <span data-html2canvas-ignore="true" className="text-[#94a3b8] font-bold text-sm bg-white/80 px-2 py-1 rounded">
+                  <span
+                    data-html2canvas-ignore="true"
+                    className="absolute left-1/2 top-1/2 rounded bg-white/80 px-2 py-1 text-sm font-bold text-[#94a3b8] -translate-x-1/2 -translate-y-1/2"
+                  >
                     서명하려면 터치
                   </span>
                 )}

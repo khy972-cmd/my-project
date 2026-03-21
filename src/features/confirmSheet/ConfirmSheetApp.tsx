@@ -9,6 +9,8 @@ export interface ConfirmSheetAppProps {
 }
 
 export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
+  const A4_WIDTH_MM = 210;
+  const A4_HEIGHT_MM = 297;
   const [zoom, setZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [signModalOpen, setSignModalOpen] = useState(false);
@@ -73,41 +75,39 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       if (!sourceField) return;
 
       const styles = window.getComputedStyle(sourceField);
-      const isTextArea = field.tagName === "TEXTAREA";
+      const replacement = clonedDoc.createElement("div");
+      const isTextArea = sourceField.tagName === "TEXTAREA";
       const nextValue = sourceField.value || "";
+      const fieldWidth = styles.width || `${sourceField.clientWidth}px`;
+      const fieldHeight = isTextArea
+        ? `${Math.max(sourceField.scrollHeight, sourceField.clientHeight, 24)}px`
+        : styles.height || `${Math.max(sourceField.clientHeight, 24)}px`;
 
-      if (field instanceof HTMLTextAreaElement) {
-        field.value = nextValue;
-        field.textContent = nextValue;
-        field.style.height = `${sourceField.scrollHeight}px`;
-        field.style.minHeight = `${sourceField.scrollHeight}px`;
-      } else {
-        field.value = nextValue;
-        field.setAttribute("value", nextValue);
-        field.style.height = styles.height;
-        field.style.minHeight = styles.minHeight;
-      }
+      replacement.style.boxSizing = "border-box";
+      replacement.style.display = "block";
+      replacement.style.width = fieldWidth;
+      replacement.style.height = fieldHeight;
+      replacement.style.minHeight = fieldHeight;
+      replacement.style.padding = styles.padding;
+      replacement.style.margin = styles.margin;
+      replacement.style.border = styles.border;
+      replacement.style.borderRadius = styles.borderRadius;
+      replacement.style.background = "transparent";
+      replacement.style.color = styles.color;
+      replacement.style.fontFamily = styles.fontFamily;
+      replacement.style.fontSize = styles.fontSize;
+      replacement.style.fontWeight = styles.fontWeight;
+      replacement.style.lineHeight = styles.lineHeight;
+      replacement.style.letterSpacing = styles.letterSpacing;
+      replacement.style.textAlign = styles.textAlign;
+      replacement.style.verticalAlign = styles.verticalAlign;
+      replacement.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
+      replacement.style.wordBreak = isTextArea ? "break-word" : "keep-all";
+      replacement.style.overflowWrap = isTextArea ? "anywhere" : "normal";
+      replacement.style.overflow = "hidden";
+      replacement.textContent = nextValue || "\u00A0";
 
-      field.style.boxSizing = "border-box";
-      field.style.padding = styles.padding;
-      field.style.margin = styles.margin;
-      field.style.border = styles.border;
-      field.style.borderRadius = styles.borderRadius;
-      field.style.background = "transparent";
-      field.style.color = styles.color;
-      field.style.fontFamily = styles.fontFamily;
-      field.style.fontSize = styles.fontSize;
-      field.style.fontWeight = styles.fontWeight;
-      field.style.lineHeight = styles.lineHeight;
-      field.style.letterSpacing = styles.letterSpacing;
-      field.style.textAlign = styles.textAlign;
-      field.style.verticalAlign = styles.verticalAlign;
-      field.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
-      field.style.wordBreak = isTextArea ? "break-word" : "normal";
-      field.style.overflowWrap = "break-word";
-      field.style.overflow = "hidden";
-      field.style.caretColor = "transparent";
-      field.style.setProperty("-webkit-text-fill-color", styles.color);
+      field.parentNode?.replaceChild(replacement, field);
     });
 
     root.querySelectorAll("img").forEach((image) => {
@@ -139,14 +139,18 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     clone.style.margin = "0";
     clone.style.boxShadow = "none";
     clone.style.maxWidth = "none";
+    clone.style.width = `${A4_WIDTH_MM}mm`;
+    clone.style.minHeight = `${A4_HEIGHT_MM}mm`;
+    clone.style.height = `${A4_HEIGHT_MM}mm`;
+    clone.style.overflow = "hidden";
     clone.setAttribute("data-confirm-capture-root", "1");
 
     host.appendChild(clone);
     document.body.appendChild(host);
 
     try {
-      const width = clone.scrollWidth || source.scrollWidth || source.offsetWidth;
-      const height = clone.scrollHeight || source.scrollHeight || source.offsetHeight;
+      const width = clone.offsetWidth || source.offsetWidth;
+      const height = clone.offsetHeight || source.offsetHeight;
       if (document.fonts?.ready) {
         await document.fonts.ready;
       }
@@ -192,15 +196,18 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const imageRatio = canvas.width / canvas.height;
-      const pageRatio = pageWidth / pageHeight;
+      const bleed = 0.05;
 
-      const renderWidth = imageRatio > pageRatio ? pageWidth : pageHeight * imageRatio;
-      const renderHeight = imageRatio > pageRatio ? pageWidth / imageRatio : pageHeight;
-      const offsetX = (pageWidth - renderWidth) / 2;
-      const offsetY = (pageHeight - renderHeight) / 2;
-
-      pdf.addImage(canvas.toDataURL("image/png", 1), "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
+      pdf.addImage(
+        canvas.toDataURL("image/png", 1),
+        "PNG",
+        -bleed,
+        -bleed,
+        pageWidth + bleed * 2,
+        pageHeight + bleed * 2,
+        undefined,
+        "FAST",
+      );
 
       const d = new Date();
       const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
