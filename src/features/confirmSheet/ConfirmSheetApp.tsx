@@ -46,6 +46,66 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     );
   };
 
+  const fixCaptureFields = (sourceRoot: HTMLElement, clonedDoc: Document) => {
+    const sourceFields = Array.from(
+      sourceRoot.querySelectorAll("[data-confirm-capture-field='1']"),
+    ) as HTMLElement[];
+    const clonedFields = Array.from(
+      clonedDoc.querySelectorAll("[data-confirm-capture-field='1']"),
+    ) as HTMLElement[];
+
+    clonedFields.forEach((replacement, index) => {
+      const sourceField = sourceFields[index];
+      if (!sourceField) return;
+
+      const styles = window.getComputedStyle(sourceField);
+      const isTextArea = sourceField.dataset.captureFieldKind === "textarea";
+      const nextValue = sourceField.textContent ?? "";
+      const fieldWidth = styles.width || `${sourceField.clientWidth}px`;
+      const fieldHeight = `${Math.max(sourceField.clientHeight, 24)}px`;
+
+      replacement.style.boxSizing = "border-box";
+      replacement.style.width = fieldWidth;
+      replacement.style.height = fieldHeight;
+      replacement.style.background = "transparent";
+      replacement.style.color = styles.color;
+      replacement.style.fontFamily = styles.fontFamily;
+      replacement.style.fontSize = styles.fontSize;
+      replacement.style.fontWeight = styles.fontWeight;
+      replacement.style.textAlign = styles.textAlign;
+      replacement.style.border = styles.border;
+      replacement.style.borderBottom = styles.borderBottom;
+      replacement.style.letterSpacing = styles.letterSpacing;
+
+      if (isTextArea) {
+        replacement.style.display = "block";
+        replacement.style.padding = styles.padding;
+        replacement.style.margin = styles.margin;
+        replacement.style.lineHeight = styles.lineHeight;
+        replacement.style.whiteSpace = "pre-wrap";
+        replacement.style.wordBreak = "break-word";
+        replacement.style.overflowWrap = "anywhere";
+      } else {
+        replacement.style.display = "flex";
+        replacement.style.alignItems = "center";
+        replacement.style.justifyContent =
+          styles.textAlign === "center"
+            ? "center"
+            : styles.textAlign === "right"
+              ? "flex-end"
+              : "flex-start";
+        replacement.style.padding = "0px";
+        replacement.style.margin = "0px";
+        replacement.style.lineHeight = fieldHeight;
+        replacement.style.whiteSpace = "nowrap";
+        replacement.style.wordBreak = "keep-all";
+        replacement.style.transform = "translateY(-12%)";
+      }
+
+      replacement.textContent = nextValue || "\u00A0";
+    });
+  };
+
   const captureDocumentCanvas = async () => {
     if (!documentRef.current) {
       throw new Error("missing_document");
@@ -71,6 +131,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     clone.style.minHeight = `${A4_HEIGHT_MM}mm`;
     clone.style.height = `${A4_HEIGHT_MM}mm`;
     clone.style.overflow = "hidden";
+    clone.setAttribute("data-confirm-capture-root", "1");
 
     host.appendChild(clone);
     document.body.appendChild(host);
@@ -96,6 +157,10 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         windowHeight: height,
         scrollX: 0,
         scrollY: 0,
+        onclone: (clonedDoc) => {
+          clonedDoc.querySelectorAll('[data-html2canvas-ignore="true"]').forEach((el) => el.remove());
+          fixCaptureFields(source, clonedDoc);
+        },
       });
     } finally {
       document.body.removeChild(host);

@@ -294,6 +294,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
               className="flex-1 w-full border-none bg-transparent text-[16px] font-semibold leading-relaxed text-black whitespace-pre-wrap break-words"
               style={{ fontFamily: "inherit" }}
               value={content}
+              multiline
             />
           ) : (
             <textarea
@@ -312,6 +313,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
               className="flex-1 w-full border-none bg-transparent text-[16px] font-semibold text-black whitespace-pre-wrap break-words"
               style={{ fontFamily: "inherit" }}
               value={notes}
+              multiline
             />
           ) : (
             <textarea
@@ -405,16 +407,24 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
               </div>
               <div className="flex h-[132px] w-full items-center justify-center overflow-hidden">
                 {signatureDataUrl ? (
-                  <img
-                    src={signatureDataUrl}
-                    alt="서명"
-                    className="max-h-[90%] max-w-[90%] object-contain"
+                  <div
+                    style={{
+                      width: "90%",
+                      height: "90%",
+                      backgroundImage: `url(${signatureDataUrl})`,
+                      backgroundSize: "contain",
+                      backgroundPosition: "center",
+                      backgroundRepeat: "no-repeat",
+                    }}
                   />
-                ) : !isCapturing ? (
-                  <span className="rounded bg-white/80 px-2 py-1 text-sm font-bold text-[#94a3b8]">
+                ) : (
+                  <span
+                    data-html2canvas-ignore="true"
+                    className="rounded bg-white/80 px-2 py-1 text-sm font-bold text-[#94a3b8]"
+                  >
                     서명하려면 터치
                   </span>
-                ) : null}
+                )}
               </div>
             </div>
           </div>
@@ -503,12 +513,19 @@ const CaptureField = ({
   value,
   className,
   style,
+  multiline = false,
 }: {
   value: string;
   className: string;
   style?: React.CSSProperties;
+  multiline?: boolean;
 }) => (
-  <div className={className} style={style}>
+  <div
+    className={className}
+    style={style}
+    data-confirm-capture-field="1"
+    data-capture-field-kind={multiline ? "textarea" : "input"}
+  >
     {value || "\u00A0"}
   </div>
 );
@@ -544,6 +561,7 @@ const AutoTextarea = ({
           padding: 2,
         }}
         value={value}
+        multiline
       />
     );
   }
