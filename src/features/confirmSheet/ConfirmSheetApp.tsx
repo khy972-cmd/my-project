@@ -43,7 +43,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
     );
   };
 
-  const fixCaptureFields = (clonedDoc: Document) => {
+  const fixCaptureFields = (sourceRoot: HTMLElement, clonedDoc: Document) => {
     const root = clonedDoc.querySelector('[data-confirm-capture-root="1"]') as HTMLElement | null;
     if (!root) return;
 
@@ -61,42 +61,60 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       el.style.boxSizing = "border-box";
     });
 
-    root.querySelectorAll("input[type='text'], textarea").forEach((field) => {
-      const el = field as HTMLInputElement | HTMLTextAreaElement;
-      const styles = clonedDoc.defaultView?.getComputedStyle(el);
-      const replacement = clonedDoc.createElement("div");
-      const isTextArea = el.tagName === "TEXTAREA";
-      const fieldHeight = `${Math.max(el.scrollHeight || 0, el.clientHeight || 24, 24)}px`;
-      replacement.style.boxSizing = styles?.boxSizing || "border-box";
-      replacement.style.display = "block";
-      replacement.style.width = styles?.width || "100%";
-      replacement.style.minHeight = styles?.minHeight || styles?.height || fieldHeight;
-      replacement.style.padding = styles?.padding || "0";
-      replacement.style.margin = styles?.margin || "0";
-      replacement.style.border = styles?.border || "none";
-      replacement.style.borderTop = styles?.borderTop || "none";
-      replacement.style.borderRight = styles?.borderRight || "none";
-      replacement.style.borderBottom = styles?.borderBottom || "none";
-      replacement.style.borderLeft = styles?.borderLeft || "none";
-      replacement.style.borderRadius = styles?.borderRadius || "0";
-      replacement.style.background = "transparent";
-      replacement.style.color = styles?.color || "#000000";
-      replacement.style.fontFamily = styles?.fontFamily || "inherit";
-      replacement.style.fontSize = styles?.fontSize || "16px";
-      replacement.style.fontWeight = styles?.fontWeight || "600";
-      replacement.style.lineHeight = styles?.lineHeight || "1.4";
-      replacement.style.letterSpacing = styles?.letterSpacing || "normal";
-      replacement.style.textAlign = styles?.textAlign || "left";
-      replacement.style.verticalAlign = styles?.verticalAlign || "baseline";
-      replacement.style.whiteSpace = isTextArea ? "pre-wrap" : "pre";
-      replacement.style.wordBreak = isTextArea ? "break-word" : "normal";
-      replacement.style.overflowWrap = "break-word";
-      replacement.style.overflow = "visible";
-      replacement.style.transform = "translateY(-0.3em)";
-      replacement.style.transformOrigin = "top left";
-      replacement.textContent = el.value || "";
+    const sourceFields = Array.from(
+      sourceRoot.querySelectorAll("input[type='text'], textarea"),
+    ) as Array<HTMLInputElement | HTMLTextAreaElement>;
+    const clonedFields = Array.from(
+      root.querySelectorAll("input[type='text'], textarea"),
+    ) as Array<HTMLInputElement | HTMLTextAreaElement>;
 
-      el.parentNode?.replaceChild(replacement, el);
+    clonedFields.forEach((field, index) => {
+      const sourceField = sourceFields[index];
+      if (!sourceField) return;
+
+      const styles = window.getComputedStyle(sourceField);
+      const isTextArea = field.tagName === "TEXTAREA";
+      const nextValue = sourceField.value || "";
+
+      if (field instanceof HTMLTextAreaElement) {
+        field.value = nextValue;
+        field.textContent = nextValue;
+        field.style.height = `${sourceField.scrollHeight}px`;
+        field.style.minHeight = `${sourceField.scrollHeight}px`;
+      } else {
+        field.value = nextValue;
+        field.setAttribute("value", nextValue);
+        field.style.height = styles.height;
+        field.style.minHeight = styles.minHeight;
+      }
+
+      field.style.boxSizing = "border-box";
+      field.style.padding = styles.padding;
+      field.style.margin = styles.margin;
+      field.style.border = styles.border;
+      field.style.borderRadius = styles.borderRadius;
+      field.style.background = "transparent";
+      field.style.color = styles.color;
+      field.style.fontFamily = styles.fontFamily;
+      field.style.fontSize = styles.fontSize;
+      field.style.fontWeight = styles.fontWeight;
+      field.style.lineHeight = styles.lineHeight;
+      field.style.letterSpacing = styles.letterSpacing;
+      field.style.textAlign = styles.textAlign;
+      field.style.verticalAlign = styles.verticalAlign;
+      field.style.whiteSpace = isTextArea ? "pre-wrap" : "nowrap";
+      field.style.wordBreak = isTextArea ? "break-word" : "normal";
+      field.style.overflowWrap = "break-word";
+      field.style.overflow = "hidden";
+      field.style.caretColor = "transparent";
+      field.style.setProperty("-webkit-text-fill-color", styles.color);
+    });
+
+    root.querySelectorAll("img").forEach((image) => {
+      const el = image as HTMLImageElement;
+      el.style.display = "block";
+      el.style.margin = "0 auto";
+      el.style.verticalAlign = "middle";
     });
   };
 
@@ -149,7 +167,7 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
           if (clonedDoc.body) {
             clonedDoc.body.style.fontFamily = `"Pretendard Variable", Pretendard, Arial, sans-serif`;
           }
-          fixCaptureFields(clonedDoc);
+          fixCaptureFields(source, clonedDoc);
         },
       });
     } finally {

@@ -312,7 +312,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
               <span className="font-extrabold text-[18px] text-[#334155]">소 속 :</span>
               <input
                 type="text"
-                className="text-center text-[18px] font-bold w-full border-b border-dashed border-[#cbd5e1] bg-transparent outline-none"
+                className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight outline-none"
                 style={{ fontFamily: "inherit" }}
                 value={org}
                 onChange={(e) => {
@@ -328,7 +328,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
               <span className="font-extrabold text-[18px] text-[#334155]">성 명 :</span>
               <input
                 type="text"
-                className="text-center text-[18px] font-bold w-full border-b border-dashed border-[#cbd5e1] bg-transparent outline-none"
+                className="w-full border-b border-dashed border-[#cbd5e1] bg-transparent px-0 py-0.5 text-center text-[18px] font-bold leading-tight outline-none"
                 style={{ fontFamily: "inherit" }}
                 value={signerName}
                 onChange={(e) => setSignerName(e.target.value)}
@@ -348,7 +348,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
                   <img
                     src={signatureDataUrl}
                     alt="서명"
-                    className="max-w-[90%] max-h-[90%] object-contain"
+                    className="block max-w-[90%] max-h-[90%] object-contain"
                   />
                 ) : (
                   <span data-html2canvas-ignore="true" className="text-[#94a3b8] font-bold text-sm bg-white/80 px-2 py-1 rounded">
@@ -359,18 +359,11 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             </div>
           </div>
 
-          <div className="mt-10 flex justify-center items-end gap-2 h-[80px]">
+          <div className="mt-10 flex justify-center items-end gap-2">
             <input
               type="text"
-              className="text-center text-[24px] font-extrabold w-[300px] border-b-2 border-black bg-transparent outline-none"
-              style={{
-                fontFamily: "inherit",
-                height: 60,
-                padding: "0 0 4px",
-                lineHeight: "1.2",
-                marginBottom: 0,
-                verticalAlign: "bottom",
-              }}
+              className="w-[300px] border-b-2 border-black bg-transparent px-0 py-0.5 text-center text-[24px] font-extrabold leading-tight outline-none"
+              style={{ fontFamily: "inherit" }}
               value={recipient}
               onChange={(e) => {
                 const next = e.target.value;
@@ -381,8 +374,8 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             />
             <input
               type="text"
-              className="w-[60px] text-left text-[20px] font-bold border-none bg-transparent outline-none"
-              style={{ fontFamily: "inherit", marginBottom: 10 }}
+              className="w-[60px] border-none bg-transparent px-0 py-0.5 text-left text-[20px] font-bold leading-tight outline-none"
+              style={{ fontFamily: "inherit" }}
               value={suffix}
               onChange={(e) => setSuffix(e.target.value)}
             />
