@@ -19957,6 +19957,10 @@ function Fk() {
       const C = (workerQuery || a.worker || '').trim().toLowerCase()
       return (C ? I.filter(_ => _.toLowerCase().includes(C)) : I).slice(0, 10)
     }, [I, a.worker, workerQuery]),
+    defaultWorkerValue = y.useMemo(
+      () => (e.manpowerList.find(C => (C.worker || '').trim())?.worker || py[0] || I[0] || '').trim(),
+      [I, e.manpowerList]
+    ),
     resolveChatFieldValue = (C, _) => (C === '기타' ? (_ || '').trim() : (C || '').trim()),
     D = o === 1 && h && w.trim().length > 0,
     Q = y.useCallback((C, _, B) => {
@@ -20407,7 +20411,7 @@ function Fk() {
                                   C.preventDefault()
                                   ;(setWorkerQuery(''),
                                     setWorkerDropdownOpen(!0),
-                                    u(B => ({ ...B, worker: (a.worker || '').trim() })))
+                                    u(B => ({ ...B, worker: defaultWorkerValue })))
                                   window.requestAnimationFrame(() => {
                                     var _
                                     ;(_ = document.getElementById('assistant-worker-input')) == null || _.focus()
@@ -20457,7 +20461,7 @@ function Fk() {
                                         onMouseDown: _ => {
                                           ;(_.preventDefault(), setWorkerDropdownOpen(!1), re(C))
                                         },
-                                        className: `mb-1 flex h-[42px] w-full items-center rounded-lg px-3 text-left text-[14px] font-semibold transition-all last:mb-0 ${((a.worker || '').trim() || (workerQuery || '').trim()) === C ? 'bg-primary-bg text-primary' : 'text-foreground hover:bg-primary-bg'}`,
+                                        className: `mb-1 flex h-[46px] w-full items-center rounded-lg px-3 text-left text-[14px] font-semibold transition-all last:mb-0 ${((a.worker || '').trim() || (workerQuery || '').trim()) === C ? 'bg-primary-bg text-primary' : 'text-foreground hover:bg-primary-bg'}`,
                                         children: C,
                                       },
                                       C
@@ -20471,10 +20475,6 @@ function Fk() {
                       ],
                     }),
                   ],
-                }),
-                c.jsx('div', {
-                  className: 'mb-3 text-center text-[12px] text-muted-foreground',
-                  children: '검색어를 지우면 본인 기본값으로 돌아가고, 목록이 다시 펼쳐집니다',
                 }),
                 c.jsx('button', {
                   onClick: workerSubmit,
