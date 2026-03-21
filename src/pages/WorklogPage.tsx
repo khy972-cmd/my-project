@@ -1980,6 +1980,14 @@ function WorkerWorklogPage() {
       return;
     }
 
+    const willOverwrite = !!matchingLog;
+    if (willOverwrite) {
+      toast.warning("같은 날짜의 저장된 일지가 있어 이번 저장은 기존 내용을 덮어씁니다.", {
+        description: `${form.workDate} · ${form.siteName}`,
+        duration: 3600,
+      });
+    }
+
     const saved = await handleSave("draft", { silent: true });
     if (!saved) return;
 
@@ -1990,7 +1998,9 @@ function WorkerWorklogPage() {
     if (saved.workDate) dateEntryMap.set(saved.workDate, saved);
 
     saveSiteDraftSnapshot("draft", { dateEntryMap });
-    toast.success("현장 누적 임시저장이 완료되었습니다.");
+    toast.success(
+      willOverwrite ? "기존 일지를 덮어써서 현장 누적 임시저장이 완료되었습니다." : "현장 누적 임시저장이 완료되었습니다.",
+    );
   };
 
   const handleUnifiedCancelRequest = async () => {
@@ -2037,6 +2047,14 @@ function WorkerWorklogPage() {
     }
 
     try {
+      const willOverwrite = !!matchingLog;
+      if (willOverwrite) {
+        toast.warning("같은 날짜의 저장된 일지가 있어 이번 요청은 기존 내용을 덮어쓴 뒤 진행됩니다.", {
+          description: `${form.workDate} · ${form.siteName}`,
+          duration: 3600,
+        });
+      }
+
       const saved = await handleSave("draft", { silent: true });
       if (!saved) return;
 
@@ -2058,7 +2076,9 @@ function WorkerWorklogPage() {
 
       saveSiteDraftSnapshot("pending", { dateEntryMap, requestedIds: requestIds });
       setForm((prev) => ({ ...prev, status: "pending" }));
-      toast.success("현장 통합승인요청이 완료되었습니다.");
+      toast.success(
+        willOverwrite ? "기존 일지를 덮어쓴 뒤 현장 통합승인요청이 완료되었습니다." : "현장 통합승인요청이 완료되었습니다.",
+      );
     } catch (error) {
       toast.error(errorMessage(error, "통합승인요청에 실패했습니다."));
     }
