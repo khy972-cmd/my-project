@@ -189,23 +189,11 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
     const [signerName, setSignerName] = useState("");
     const [recipient, setRecipient] = useState("");
     const [suffix, setSuffix] = useState("귀중");
-    const lastAutoOrgRef = useRef("");
 
     const d = new Date();
     const [dateStr, setDateStr] = useState(
       `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`,
     );
-
-    useEffect(() => {
-      const nextAuto = company.trim();
-      setOrg((prev) => {
-        if (!prev.trim() || prev === lastAutoOrgRef.current) {
-          lastAutoOrgRef.current = nextAuto;
-          return nextAuto;
-        }
-        return prev;
-      });
-    }, [company]);
 
     useImperativeHandle(ref, () => ({
       reset: () => {
@@ -216,7 +204,6 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
         setContent("");
         setNotes("");
         setOrg("");
-        lastAutoOrgRef.current = "";
         setSignerName("");
         setRecipient("");
         setSuffix("귀중");
@@ -261,7 +248,14 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
               </Td>
               <Th>업 체</Th>
               <Td>
-                <AutoTextarea value={company} onChange={setCompany} placeholder="업체명 입력" />
+                <AutoTextarea
+                  value={company}
+                  onChange={(next) => {
+                    setCompany(next);
+                    setOrg(next);
+                  }}
+                  placeholder="업체명 입력"
+                />
               </Td>
             </tr>
             <tr>
@@ -324,7 +318,11 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
                 className="text-center text-[18px] font-bold w-full border-b border-dashed border-[#cbd5e1] bg-transparent outline-none"
                 style={{ fontFamily: "inherit" }}
                 value={org}
-                onChange={(e) => setOrg(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setOrg(next);
+                  setCompany(next);
+                }}
                 placeholder="소속 입력"
               />
             </div>
@@ -356,7 +354,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
                     className="max-w-[90%] max-h-[90%] object-contain"
                   />
                 ) : (
-                  <span className="text-[#94a3b8] font-bold text-sm bg-white/80 px-2 py-1 rounded">
+                  <span data-html2canvas-ignore="true" className="text-[#94a3b8] font-bold text-sm bg-white/80 px-2 py-1 rounded">
                     서명하려면 터치
                   </span>
                 )}
