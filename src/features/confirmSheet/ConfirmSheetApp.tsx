@@ -88,15 +88,9 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         replacement.style.wordBreak = "break-word";
         replacement.style.overflowWrap = "anywhere";
       } else {
-        // 단일 input: html2canvas 폰트 쏠림 방지를 위한 수직 중앙 강제 고정
-        replacement.style.display = "flex";
-        replacement.style.alignItems = "center";
-        replacement.style.justifyContent =
-          styles.textAlign === "center"
-            ? "center"
-            : styles.textAlign === "right"
-              ? "flex-end"
-              : "flex-start";
+        // 단일 input
+        replacement.style.display = "block";
+        replacement.style.textAlign = styles.textAlign;
         replacement.style.padding = styles.padding;
         replacement.style.margin = styles.margin;
         replacement.style.lineHeight = styles.lineHeight;
