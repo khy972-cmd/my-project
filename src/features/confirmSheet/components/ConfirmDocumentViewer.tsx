@@ -224,7 +224,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
           width: "210mm",
           minHeight: "297mm",
           maxHeight: "297mm",
-          padding: "8mm 15mm",
+          padding: "6mm 15mm",
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-start",
