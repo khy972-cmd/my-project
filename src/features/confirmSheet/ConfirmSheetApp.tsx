@@ -104,8 +104,6 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
         replacement.style.lineHeight = "1";
         replacement.style.whiteSpace = "nowrap";
         replacement.style.overflow = "visible";
-        replacement.style.position = "relative";
-        replacement.style.top = "-9px";
       }
 
       replacement.textContent = nextValue || "\u00A0";
