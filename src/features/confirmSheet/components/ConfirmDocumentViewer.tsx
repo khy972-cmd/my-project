@@ -221,13 +221,13 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
         ref={documentRef}
         className="bg-white text-black"
         style={{
-          width: "210mm",
+          width: window.innerWidth < 768 ? "100%" : "210mm",
           minHeight: "297mm",
           maxHeight: "297mm",
-          padding: "15mm 15mm",
+          padding: window.innerWidth < 768 ? "5mm" : "15mm",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "flex-start",
+          justifyContent: "center",
           fontFamily: `"Pretendard Variable", Pretendard, sans-serif`,
         }}
       >
