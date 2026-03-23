@@ -231,7 +231,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
           fontFamily: `"Pretendard Variable", Pretendard, sans-serif`,
         }}
       >
-        <div className="mb-[20px] border-b-[3px] border-double border-black pb-[12px] text-center">
+        <div className="mb-[15px] border-b-[3px] border-double border-black pb-[10px] text-center">
           <h1 className="m-0 text-[36px] font-black tracking-[5px] text-[#111]">작 업 완 료 확 인 서</h1>
         </div>
 
@@ -240,10 +240,10 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
           style={{ border: "2px solid #1e293b", tableLayout: "fixed" }}
         >
           <colgroup>
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "48%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "30%" }} />
+            <col style={{ width: window.innerWidth < 768 ? "18%" : "12%" }} />
+            <col style={{ width: window.innerWidth < 768 ? "32%" : "48%" }} />
+            <col style={{ width: window.innerWidth < 768 ? "18%" : "10%" }} />
+            <col style={{ width: window.innerWidth < 768 ? "32%" : "30%" }} />
           </colgroup>
           <tbody>
             <tr>
@@ -328,20 +328,20 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
         </SectionBlock>
 
         <div className="mt-0 text-center">
-          <div className="mb-[18px] text-[20px] font-extrabold">
+          <div className="mb-[12px] text-[20px] font-extrabold">
             상기 사항과 같이 작업을 완료하였음을 확인합니다.
           </div>
 
           {isCapturing ? (
             <CaptureField
-              className="mb-[20px] w-full border-none bg-transparent text-center text-[20px] font-extrabold"
+              className="mb-[15px] w-full border-none bg-transparent text-center text-[20px] font-extrabold"
               style={{ fontFamily: "inherit" }}
               value={dateStr}
             />
           ) : (
             <input
               type="text"
-              className="mb-[20px] w-full border-none bg-transparent text-center text-[20px] font-extrabold outline-none"
+              className="mb-[15px] w-full border-none bg-transparent text-center text-[20px] font-extrabold outline-none"
               style={{ fontFamily: "inherit" }}
               value={dateStr}
               onChange={(e) => setDateStr(e.target.value)}
@@ -423,7 +423,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-center gap-2 pt-3">
+          <div className="mt-4 flex items-center justify-center gap-2 pt-2">
             {isCapturing ? (
               <CaptureField
                 className="w-[300px] border-b-2 border-black bg-transparent px-0 text-center text-[24px] font-extrabold"
