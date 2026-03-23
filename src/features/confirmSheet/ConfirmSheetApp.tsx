@@ -98,10 +98,10 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
             : styles.textAlign === "right"
               ? "flex-end"
               : "flex-start";
-        replacement.style.padding = "0px";
-        replacement.style.margin = "0px";
+        replacement.style.padding = styles.padding;
+        replacement.style.margin = styles.margin;
         replacement.style.height = fieldHeight;
-        replacement.style.lineHeight = "1";
+        replacement.style.lineHeight = styles.lineHeight;
         replacement.style.whiteSpace = "nowrap";
         replacement.style.overflow = "visible";
       }
