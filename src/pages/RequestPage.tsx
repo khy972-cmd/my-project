@@ -9,6 +9,7 @@ const OFFLINE_TOAST_MESSAGE = "\uC624\uD504\uB77C\uC778\uC5D0\uC11C\uB294 \uCE74
 const DEFAULT_CHANNEL_URL = "https://pf.kakao.com/_xfgxdqX";
 const DEFAULT_CHAT_URL = "https://pf.kakao.com/_xfgxdqX/chat";
 const BRIDGE_ROUTE = "/request/external";
+const REQUEST_ROUTE = "/request";
 const PAGE_TITLE = "\uBCF8\uC0AC\uC694\uCCAD";
 const PAGE_DESCRIPTION = "카카오톡으로 본사 문의 (오프라인 사용 불가)";
 const FOLLOW_BUTTON_LABEL = "\uCC44\uB110 \uCD94\uAC00(\uAC04\uD3B8)";
@@ -39,7 +40,9 @@ export default function RequestPage() {
   };
 
   const openKakaoBridge = (targetUrl: string, title: string) => {
-    navigate(buildBridgePath(targetUrl, title));
+    navigate(buildBridgePath(targetUrl, title), {
+      state: { returnTo: REQUEST_ROUTE },
+    });
   };
 
   const handleFollowChannel = () => {

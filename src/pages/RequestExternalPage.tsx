@@ -1,15 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { toast } from "sonner";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const DEFAULT_TARGET_URL = "https://pf.kakao.com/_xfgxdqX";
 const DEFAULT_TITLE = "\uBCF8\uC0AC\uC694\uCCAD";
+const DEFAULT_RETURN_TO = "/request";
 const BACK_LABEL = "\uC774\uC804";
 const CLOSE_LABEL = "\uB2EB\uAE30";
 const NEW_WINDOW_LABEL = "\uC0C8 \uCC3D";
-const CLOSE_FALLBACK_MESSAGE = "\uCC3D \uB2EB\uAE30\uAC00 \uC81C\uD55C\uB418\uC5B4 \uC694\uCCAD \uD654\uBA74\uC73C\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4";
+const IFRAME_SANDBOX = "allow-scripts allow-same-origin allow-forms allow-popups";
+
+type RequestExternalLocationState = {
+  historyGuard?: boolean;
+  returnTo?: string;
+};
 
 function resolveTargetUrl(rawValue: string | null): string {
   const target = rawValue?.trim();
@@ -26,32 +31,56 @@ function resolveTargetUrl(rawValue: string | null): string {
   }
 }
 
+function resolveReturnTo(rawValue: string | undefined): string {
+  if (!rawValue?.startsWith("/")) return DEFAULT_RETURN_TO;
+  return rawValue;
+}
+
 export default function RequestExternalPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const locationState = location.state as RequestExternalLocationState | null;
 
-  const { targetUrl, title } = useMemo(() => {
+  const { targetUrl, title, returnTo } = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const resolvedTitle = params.get("title")?.trim() || DEFAULT_TITLE;
+
     return {
       targetUrl: resolveTargetUrl(params.get("target")),
       title: resolvedTitle,
+      returnTo: resolveReturnTo(locationState?.returnTo),
     };
-  }, [location.search]);
+  }, [location.search, locationState]);
+
+  useEffect(() => {
+    if (locationState?.historyGuard) return;
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: location.search,
+      },
+      {
+        state: { ...locationState, historyGuard: true, returnTo },
+      },
+    );
+  }, [location.pathname, location.search, locationState, navigate, returnTo]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      navigate(returnTo, { replace: true });
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [navigate, returnTo]);
 
   const handleBack = () => {
-    navigate("/request", { replace: true });
+    navigate(returnTo, { replace: true });
   };
 
   const handleClose = () => {
-    window.close();
-
-    window.setTimeout(() => {
-      if (!window.closed) {
-        toast.message(CLOSE_FALLBACK_MESSAGE);
-        handleBack();
-      }
-    }, 120);
+    navigate(returnTo, { replace: true });
   };
 
   const handleOpenInNewWindow = () => {
@@ -85,6 +114,7 @@ export default function RequestExternalPage() {
               className="h-full w-full border-0"
               loading="eager"
               referrerPolicy="strict-origin-when-cross-origin"
+              sandbox={IFRAME_SANDBOX}
             />
           </div>
         </Card>
