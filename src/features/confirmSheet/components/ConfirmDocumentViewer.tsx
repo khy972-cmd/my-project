@@ -483,7 +483,17 @@ const Th = ({ children }: { children: React.ReactNode }) => (
 );
 
 const Td = ({ children }: { children: React.ReactNode }) => (
-  <td style={{ border: "1px solid #1e293b", padding: 8, verticalAlign: "middle" }}>{children}</td>
+  <td
+    style={{
+      border: "1px solid #1e293b",
+      padding: 8,
+      verticalAlign: "middle",
+      wordBreak: "break-word",
+      overflowWrap: "anywhere",
+    }}
+  >
+    {children}
+  </td>
 );
 
 const SectionBlock = ({
