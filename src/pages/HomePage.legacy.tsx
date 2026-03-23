@@ -195,6 +195,31 @@ export function WorkerHomePageLegacy() {
   /* Save state */
   const [saveVersion, setSaveVersion] = useState(0);
 
+  /* Auto-update workDate to today on mount and daily */
+  useEffect(() => {
+    const updateToToday = () => {
+      const currentToday = getTodayYYYYMMDD();
+      setWorkDate(currentToday);
+    };
+
+    // Set to today on mount
+    updateToToday();
+
+    // Update at midnight
+    const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const msUntilMidnight = tomorrow.getTime() - now.getTime();
+
+    const midnightTimer = setTimeout(() => {
+      updateToToday();
+      // Set up daily interval after first midnight
+      const dailyInterval = setInterval(updateToToday, 24 * 60 * 60 * 1000);
+      return () => clearInterval(dailyInterval);
+    }, msUntilMidnight);
+
+    return () => clearTimeout(midnightTimer);
+  }, []);
+
   /* Validation */
   const hasSite = !!selectedSite;
   const hasWorkDate = !!workDate;
