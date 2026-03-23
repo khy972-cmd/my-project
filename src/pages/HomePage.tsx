@@ -24,6 +24,7 @@ import { WorkerHomePageLegacy } from "@/pages/HomePage.legacy";
 const HOME_ALLOWED_ROUTES = new Set(["/", "/output", "/worklog", "/site", "/doc", "/request"]);
 const HOME_IFRAME_CHECK_DELAY_MS = 1200;
 const HOME_BRIDGE_BADGE_AUTO_HIDE_MS = 2600;
+const HOME_BRIDGE_DUPLICATE_SAVE_WINDOW_MS = 1000;
 
 type HomeIframeMode = "iframe-main" | "iframe-fallback" | "legacy";
 type HomeRenderMode = "partner" | HomeIframeMode;
@@ -81,6 +82,8 @@ export default function HomePage() {
   const homeDraftPollRef = useRef<number | null>(null);
   const homeDraftSyncChainRef = useRef<Promise<void>>(Promise.resolve());
   const homeBridgeRequestIdsRef = useRef<Set<string>>(new Set());
+  const homeBridgeReadyRef = useRef(false);
+  const recentHomeBridgeSaveRef = useRef<{ raw: string; at: number } | null>(null);
 
   const homeSiteOptions = useMemo(
     () =>
@@ -143,11 +146,32 @@ export default function HomePage() {
     [],
   );
 
+  const isDuplicateHomeBridgeSave = useCallback((raw: string) => {
+    const now = Date.now();
+    const recent = recentHomeBridgeSaveRef.current;
+    if (recent && recent.raw === raw && now - recent.at < HOME_BRIDGE_DUPLICATE_SAVE_WINDOW_MS) {
+      return true;
+    }
+
+    recentHomeBridgeSaveRef.current = { raw, at: now };
+    return false;
+  }, []);
+
   const bridgeHomeDraftSave = useCallback(
     (raw: string, meta: { source: "message" | "poll" | "storage"; requestId?: string }) => {
       homeDraftSyncChainRef.current = homeDraftSyncChainRef.current
         .catch(() => undefined)
         .then(async () => {
+          if (isDuplicateHomeBridgeSave(raw)) {
+            if (import.meta.env.DEV) {
+              console.info("[home-bridge] save:deduped", {
+                source: meta.source,
+                requestId: meta.requestId || "",
+              });
+            }
+            return;
+          }
+
           const parsed = parseHomeDraftToWorklogInput(raw, today);
           if (!parsed.ok) {
             if (import.meta.env.DEV) {
@@ -225,7 +249,7 @@ export default function HomePage() {
           toast.error(message);
         });
     },
-    [postHomeBridgeStatusToIframe, saveWorklogMutation, setHomeBridgeIndicator, today],
+    [isDuplicateHomeBridgeSave, postHomeBridgeStatusToIframe, saveWorklogMutation, setHomeBridgeIndicator, today],
   );
 
   const clearLoadCheckTimer = useCallback(() => {
@@ -291,6 +315,7 @@ export default function HomePage() {
     if (isPartner || roleLoading || iframeMode === "legacy") return;
 
     const syncLatestHomeDraft = () => {
+      if (homeBridgeReadyRef.current) return;
       const raw = window.localStorage.getItem(HOME_DRAFT_KEY) || "";
       if (!raw || raw === lastHomeDraftRawRef.current) return;
       lastHomeDraftRawRef.current = raw;
@@ -300,21 +325,11 @@ export default function HomePage() {
     lastHomeDraftRawRef.current = window.localStorage.getItem(HOME_DRAFT_KEY) || "";
     homeDraftPollRef.current = window.setInterval(syncLatestHomeDraft, 700);
 
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key !== HOME_DRAFT_KEY) return;
-      if (!event.newValue || event.newValue === lastHomeDraftRawRef.current) return;
-      lastHomeDraftRawRef.current = event.newValue;
-      void bridgeHomeDraftSave(event.newValue, { source: "storage" });
-    };
-
-    window.addEventListener("storage", handleStorage);
-
     return () => {
       if (homeDraftPollRef.current !== null) {
         window.clearInterval(homeDraftPollRef.current);
         homeDraftPollRef.current = null;
       }
-      window.removeEventListener("storage", handleStorage);
     };
   }, [bridgeHomeDraftSave, iframeMode, isPartner, roleLoading]);
 
@@ -325,6 +340,11 @@ export default function HomePage() {
       if (isHomeBridgeMessage(event.data)) {
         const data = event.data;
         if (data.source === HOME_IFRAME_BRIDGE_PARENT_SOURCE) return;
+        homeBridgeReadyRef.current = true;
+        if (homeDraftPollRef.current !== null) {
+          window.clearInterval(homeDraftPollRef.current);
+          homeDraftPollRef.current = null;
+        }
 
         if (data.phase === "draft-changed") {
           setHomeBridgeIndicator("draft-changed");
