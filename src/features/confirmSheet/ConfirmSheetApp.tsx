@@ -62,12 +62,11 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
       const isTextArea = sourceField.dataset.captureFieldKind === "textarea";
       const nextValue = sourceField.textContent ?? "";
       const fieldWidth = styles.width || `${sourceField.clientWidth}px`;
-      const fieldHeight = `${Math.max(sourceField.clientHeight, 24)}px`;
 
       replacement.style.boxSizing = "border-box";
       replacement.style.width = fieldWidth;
-      replacement.style.height = fieldHeight;
-      replacement.style.minHeight = fieldHeight;
+      replacement.style.height = styles.height;
+      replacement.style.minHeight = styles.minHeight;
       replacement.style.background = "transparent";
       replacement.style.color = styles.color;
       replacement.style.fontFamily = styles.fontFamily;
@@ -100,7 +99,6 @@ export default function ConfirmSheetApp({ onClose }: ConfirmSheetAppProps) {
               : "flex-start";
         replacement.style.padding = styles.padding;
         replacement.style.margin = styles.margin;
-        replacement.style.height = fieldHeight;
         replacement.style.lineHeight = styles.lineHeight;
         replacement.style.whiteSpace = "nowrap";
         replacement.style.overflow = "visible";
