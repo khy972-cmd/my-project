@@ -224,19 +224,19 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
           width: "210mm",
           minHeight: "297mm",
           maxHeight: "297mm",
-          padding: "15mm",
+          padding: "12mm 15mm",
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-start",
           fontFamily: `"Pretendard Variable", Pretendard, sans-serif`,
         }}
       >
-        <div className="mb-[30px] border-b-[3px] border-double border-black pb-[15px] text-center">
+        <div className="mb-[20px] border-b-[3px] border-double border-black pb-[12px] text-center">
           <h1 className="m-0 text-[36px] font-black tracking-[5px] text-[#111]">작 업 완 료 확 인 서</h1>
         </div>
 
         <table
-          className="mb-5 w-full border-collapse"
+          className="mb-3 w-full border-collapse"
           style={{ border: "2px solid #1e293b", tableLayout: "fixed" }}
         >
           <colgroup>
@@ -308,7 +308,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
           )}
         </SectionBlock>
 
-        <SectionBlock title="특기사항" className="h-[150px]">
+        <SectionBlock title="특기사항" className="h-[130px]">
           {isCapturing ? (
             <CaptureField
               className="flex-1 w-full border-none bg-transparent text-[16px] font-semibold text-black whitespace-pre-wrap break-words"
@@ -327,21 +327,21 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
           )}
         </SectionBlock>
 
-        <div className="mt-[10px] text-center">
-          <div className="mb-[25px] text-[20px] font-extrabold">
+        <div className="mt-0 text-center">
+          <div className="mb-[18px] text-[20px] font-extrabold">
             상기 사항과 같이 작업을 완료하였음을 확인합니다.
           </div>
 
           {isCapturing ? (
             <CaptureField
-              className="mb-[30px] w-full border-none bg-transparent text-center text-[20px] font-extrabold"
+              className="mb-[20px] w-full border-none bg-transparent text-center text-[20px] font-extrabold"
               style={{ fontFamily: "inherit" }}
               value={dateStr}
             />
           ) : (
             <input
               type="text"
-              className="mb-[30px] w-full border-none bg-transparent text-center text-[20px] font-extrabold outline-none"
+              className="mb-[20px] w-full border-none bg-transparent text-center text-[20px] font-extrabold outline-none"
               style={{ fontFamily: "inherit" }}
               value={dateStr}
               onChange={(e) => setDateStr(e.target.value)}
@@ -349,7 +349,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
           )}
 
           <div
-            className="mb-5 grid"
+            className="mb-3 grid"
             style={{
               gridTemplateColumns: "33% 27% 40%",
               border: "2px solid #1e293b",
@@ -423,7 +423,7 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             </div>
           </div>
 
-          <div className="mt-10 flex items-center justify-center gap-2 pt-4">
+          <div className="mt-6 flex items-center justify-center gap-2 pt-3">
             {isCapturing ? (
               <CaptureField
                 className="w-[300px] border-b-2 border-black bg-transparent px-0 text-center text-[24px] font-extrabold"
@@ -495,8 +495,8 @@ const SectionBlock = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={`mb-5 flex flex-col p-[15px] ${className}`} style={{ border: "2px solid #1e293b" }}>
-    <div className="mb-3 border-l-[5px] border-[#475569] pl-3 text-[18px] font-extrabold text-[#1e293b]">
+  <div className={`mb-3 flex flex-col p-[12px] ${className}`} style={{ border: "2px solid #1e293b" }}>
+    <div className="mb-2 border-l-[5px] border-[#475569] pl-3 text-[18px] font-extrabold text-[#1e293b]">
       {title}
     </div>
     {children}
