@@ -92,7 +92,6 @@ export default function HomePageLegacy() {
 export function WorkerHomePageLegacy() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const today = getTodayYYYYMMDD();
   const saveWorklogMutation = useSaveWorklog();
   const { data: siteList = [] } = useSiteList();
   const { data: workerNames = [] } = useOperationalWorkerNames();
@@ -154,7 +153,7 @@ export function WorkerHomePageLegacy() {
   const [siteSearch, setSiteSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [dept, setDept] = useState("INOPNC");
-  const [workDate, setWorkDate] = useState(today);
+  const [workDate, setWorkDate] = useState(() => getTodayYYYYMMDD());
 
   /* Manpower */
   const [manpower, setManpower] = useState<ManpowerItem[]>(() => [createDefaultManpowerRow()]);
@@ -677,7 +676,7 @@ export function WorkerHomePageLegacy() {
     setSelectedSite("");
     setSiteSearch("");
     setDept("INOPNC");
-    setWorkDate(today);
+    setWorkDate(getTodayYYYYMMDD());
     setManpower([createDefaultManpowerRow()]);
     setWorkSets([{ id: Date.now(), member: "", process: "", type: "", location: { block: "", dong: "", floor: "" }, customMemberValue: "", customProcessValue: "", customTypeValue: "" }]);
     setMaterials([]);
