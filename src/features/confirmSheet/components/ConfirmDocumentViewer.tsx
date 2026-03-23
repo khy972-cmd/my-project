@@ -223,10 +223,11 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
         style={{
           width: "210mm",
           minHeight: "297mm",
+          maxHeight: "297mm",
           padding: "15mm",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
+          justifyContent: "flex-start",
           fontFamily: `"Pretendard Variable", Pretendard, sans-serif`,
         }}
       >
@@ -426,14 +427,14 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             {isCapturing ? (
               <CaptureField
                 className="w-[300px] border-b-2 border-black bg-transparent px-0 text-center text-[24px] font-extrabold"
-                style={{ fontFamily: "inherit", lineHeight: 1.2 }}
+                style={{ fontFamily: "inherit", lineHeight: 1.8, paddingBottom: "4px" }}
                 value={recipient}
               />
             ) : (
               <input
                 type="text"
                 className="w-[300px] border-b-2 border-black bg-transparent px-0 text-center text-[24px] font-extrabold outline-none"
-                style={{ fontFamily: "inherit", lineHeight: 1.2 }}
+                style={{ fontFamily: "inherit", lineHeight: 1.8, paddingBottom: "4px" }}
                 value={recipient}
                 onChange={(e) => {
                   const next = e.target.value;
@@ -446,14 +447,14 @@ const DocumentForm = forwardRef<{ reset: () => void }, DocumentFormProps>(
             {isCapturing ? (
               <CaptureField
                 className="recipient-suffix w-[60px] border-none bg-transparent px-0 text-left text-[20px] font-bold"
-                style={{ fontFamily: "inherit", lineHeight: 1.2 }}
+                style={{ fontFamily: "inherit", lineHeight: 1.8, paddingBottom: "4px" }}
                 value={suffix}
               />
             ) : (
               <input
                 type="text"
                 className="recipient-suffix w-[60px] border-none bg-transparent px-0 text-left text-[20px] font-bold outline-none"
-                style={{ fontFamily: "inherit", lineHeight: 1.2 }}
+                style={{ fontFamily: "inherit", lineHeight: 1.8, paddingBottom: "4px" }}
                 value={suffix}
                 onChange={(e) => setSuffix(e.target.value)}
               />
