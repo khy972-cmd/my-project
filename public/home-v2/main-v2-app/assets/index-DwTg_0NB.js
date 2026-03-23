@@ -17022,7 +17022,7 @@ function fk() {
           selectedSite: Me(r.selectedSite, e.selectedSite),
           siteSearch: Me(r.siteSearch, e.siteSearch),
           dept: Me(r.dept, e.dept),
-          workDate: Me(r.workDate, e.workDate),
+          workDate: new Date().toISOString().slice(0, 10),
           manpowerList: lk(r.manpowerList, e.manpowerList),
           workSets: ak(r.workSets, e.workSets),
           materials: uk(r.materials, e.materials),
