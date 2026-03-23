@@ -1,6 +1,7 @@
 ﻿import { useState, useMemo } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Calendar, Clock, FileText, Eye, EyeOff, Share, Download, X } from "lucide-react";
 import { useRef } from "react";
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useWorklogs } from "@/hooks/useSupabaseWorklogs";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -10,9 +11,9 @@ import { useMyAdminDirectoryEntry } from "@/hooks/useMyAdminDirectoryEntry";
 import SiteCombobox, { type SiteComboboxOption } from "@/components/site/SiteCombobox";
 import AdminConsoleTab from "@/components/admin/AdminConsoleTab";
 import PartnerOutputPage from "@/components/partner/PartnerOutputPage";
-import type { WorklogEntry } from "@/lib/worklogStore";
-import { createOperationalSiteLookup, normalizeSiteSearch, resolveOperationalSiteName } from "@/lib/siteList";
+import { createOperationalSiteLookup, resolveOperationalSiteName } from "@/lib/siteList";
 import { useSiteList } from "@/hooks/useSiteList";
+import { describeWorkerRelevance } from "@/lib/worklogWorker";
 
 const WEEK_DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -82,40 +83,46 @@ function WorkerOutputPage({ isAdmin }: { isAdmin: boolean }) {
   const paystubPdfRef = useRef<HTMLDivElement | null>(null);
   const payRequestRef = useRef<HTMLDivElement | null>(null);
 
-  // Live worklog data from Supabase
-  const { data: worklogs = [] } = useWorklogs();
-  const dailyRate = typeof directoryEntry?.daily === "number" ? directoryEntry.daily : 0;
-  const siteLookup = useMemo(() => createOperationalSiteLookup(siteList), [siteList]);
   const workerNameCandidates = useMemo(() => {
     const metadataName = typeof user?.user_metadata?.name === "string" ? user.user_metadata.name : "";
-    return [...new Set([directoryEntry?.name, profile?.name, metadataName].map((value) => String(value || "").trim()).filter(Boolean))];
-  }, [directoryEntry?.name, profile?.name, user?.user_metadata?.name]);
+    const emailName = typeof user?.email === "string" ? user.email.split("@")[0] : "";
+    return [...new Set([directoryEntry?.name, profile?.name, metadataName, emailName].map((value) => String(value || "").trim()).filter(Boolean))];
+  }, [directoryEntry?.name, profile?.name, user?.email, user?.user_metadata?.name]);
   const normalizedWorkerNames = useMemo(
-    () => new Set(workerNameCandidates.map((name) => normalizeSiteSearch(name)).filter(Boolean)),
+    () =>
+      new Set(
+        workerNameCandidates
+          .map((name) => String(name || "").toLowerCase().replace(/\s+/g, "").trim())
+          .filter(Boolean),
+      ),
     [workerNameCandidates],
   );
+  // Live worklog data from Supabase
+  const { data: worklogs = [] } = useWorklogs({ mode: "worker-output", workerNames: workerNameCandidates });
+  const dailyRate = typeof directoryEntry?.daily === "number" ? directoryEntry.daily : 0;
+  const siteLookup = useMemo(() => createOperationalSiteLookup(siteList), [siteList]);
 
-  const personalWorklogs = useMemo(
+  const relevantWorklogsForCurrentWorker = useMemo(
     () =>
       worklogs
-        .filter((worklog) => !user?.id || worklog.createdBy === user.id)
         .map((worklog) => {
-          const manpowerRows = Array.isArray(worklog.manpower) ? worklog.manpower : [];
-          const totalHours = manpowerRows.reduce((sum, item) => sum + Number(item.workHours || 0), 0);
-          const matchedRows = manpowerRows.filter((item) =>
-            normalizedWorkerNames.has(normalizeSiteSearch(String(item.worker || ""))),
-          );
-          const matchedHours = matchedRows.reduce((sum, item) => sum + Number(item.workHours || 0), 0);
-          const effectiveHours = matchedHours > 0 ? matchedHours : totalHours;
-          const resolvedSiteName = resolveOperationalSiteName(worklog.siteValue || "", worklog.siteName || "", siteLookup);
+          const relevance = describeWorkerRelevance(worklog, {
+            userId: user?.id,
+            normalizedWorkerNames,
+          });
+          if (!relevance.isRelevant || relevance.effectiveHours <= 0) return null;
 
-          if (effectiveHours <= 0 || !resolvedSiteName) return null;
+          const resolvedSiteName =
+            resolveOperationalSiteName(worklog.siteValue || "", worklog.siteName || "", siteLookup) ||
+            String(worklog.siteName || "").trim() ||
+            String(worklog.siteValue || "").trim() ||
+            "현장 미지정";
 
           return {
             worklog,
-            effectiveHours,
+            effectiveHours: relevance.effectiveHours,
             resolvedSiteName,
-            matchedWorkerName: matchedRows[0]?.worker?.trim() || "",
+            matchedWorkerName: relevance.matchedWorkerName,
           };
         })
         .filter((item): item is NonNullable<typeof item> => !!item),
@@ -125,14 +132,14 @@ function WorkerOutputPage({ isAdmin }: { isAdmin: boolean }) {
     directoryEntry?.name ||
     profile?.name ||
     (typeof user?.user_metadata?.name === "string" ? user.user_metadata.name : "") ||
-    personalWorklogs[0]?.matchedWorkerName ||
+    relevantWorklogsForCurrentWorker[0]?.matchedWorkerName ||
     "-";
   const workerAffiliation = directoryEntry?.affiliation || profile?.affiliation || "이노피앤씨";
 
   // Build calendar work data from real worklogs
   const workData = useMemo(() => {
     const data: Record<string, { site: string; man: number; price: number; worker: string }[]> = {};
-    const monthLogs = personalWorklogs.filter(({ worklog }) => {
+    const monthLogs = relevantWorklogsForCurrentWorker.filter(({ worklog }) => {
       const prefix = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
       return worklog.workDate.startsWith(prefix);
     });
@@ -140,16 +147,47 @@ function WorkerOutputPage({ isAdmin }: { isAdmin: boolean }) {
     monthLogs.forEach(({ effectiveHours, resolvedSiteName, worklog }) => {
       if (!data[worklog.workDate]) data[worklog.workDate] = [];
       const price = dailyRate > 0 ? Math.round(effectiveHours * dailyRate) : 0;
+      const existing = data[worklog.workDate].find((entry) => entry.site === resolvedSiteName && entry.worker === workerDisplayName);
+      if (existing) {
+        existing.man = Math.round((existing.man + effectiveHours) * 10) / 10;
+        existing.price += price;
+        return;
+      }
       data[worklog.workDate].push({
         site: resolvedSiteName,
-        man: effectiveHours,
+        man: Math.round(effectiveHours * 10) / 10,
         price,
         worker: workerDisplayName,
       });
     });
 
     return data;
-  }, [currentYear, currentMonth, dailyRate, personalWorklogs, workerDisplayName]);
+  }, [currentYear, currentMonth, dailyRate, relevantWorklogsForCurrentWorker, workerDisplayName]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.info("[output] fetched-worklogs", {
+      userId: user?.id,
+      count: worklogs.length,
+      workerNameCandidates,
+    });
+  }, [user?.id, workerNameCandidates, worklogs.length]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.info("[output] relevant-worklogs", {
+      userId: user?.id,
+      count: relevantWorklogsForCurrentWorker.length,
+      worklogIds: relevantWorklogsForCurrentWorker.map(({ worklog }) => worklog.id),
+    });
+  }, [relevantWorklogsForCurrentWorker, user?.id]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.info("[output] calendar-date-keys", {
+      keys: Object.keys(workData).sort(),
+    });
+  }, [workData]);
 
   // Calendar rendering
   const calendarData = useMemo(() => {
@@ -248,7 +286,7 @@ function WorkerOutputPage({ isAdmin }: { isAdmin: boolean }) {
   const salaryHistory = useMemo<SalaryHistoryEntry[]>(() => {
     const grouped = new Map<string, { man: number; grossPay: number }>();
 
-    personalWorklogs.forEach(({ effectiveHours, worklog }) => {
+    relevantWorklogsForCurrentWorker.forEach(({ effectiveHours, worklog }) => {
       const rawDate = (worklog.workDate || "").slice(0, 7);
       if (!rawDate) return;
       const grossPay = dailyRate > 0 ? Math.round(effectiveHours * dailyRate) : 0;
@@ -275,7 +313,7 @@ function WorkerOutputPage({ isAdmin }: { isAdmin: boolean }) {
         };
       })
       .sort((left, right) => right.rawDate.localeCompare(left.rawDate));
-  }, [dailyRate, personalWorklogs]);
+  }, [dailyRate, relevantWorklogsForCurrentWorker]);
 
   const filteredSalary = useMemo(() => {
     let list = salaryHistory.filter(s => s.year === salFilterYear);

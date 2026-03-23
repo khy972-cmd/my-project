@@ -637,7 +637,7 @@ export function WorkerHomePageLegacy() {
       localStorage.setItem(WORKLOG_INDEX_V4_KEY, JSON.stringify(existing));
 
       // Save to Supabase (or localStorage in test mode)
-      saveWorklogMutation.mutate(worklogPayload);
+      await saveWorklogMutation.mutateAsync(worklogPayload);
 
       toast.success(`성공적으로 저장되었습니다 (v${newVersion})`);
     } catch {

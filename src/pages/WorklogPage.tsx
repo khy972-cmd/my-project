@@ -1870,12 +1870,29 @@ function WorkerWorklogPage() {
       ]);
 
       const payload = buildPayload(intent, existing ? existing.version + 1 : 1, preparedPhotos, preparedDrawings);
+      if (import.meta.env.DEV) {
+        console.info("[worklog-page] save:start", {
+          intent,
+          existingId: existing?.id || null,
+          siteName: payload.siteName,
+          workDate: payload.workDate,
+          manpowerCount: payload.manpower.length,
+          workSetCount: payload.workSets.length,
+        });
+      }
       let savedEntry: WorklogEntry;
 
       if (existing) {
         savedEntry = await updateMutation.mutateAsync({ id: existing.id, entry: payload });
       } else {
         savedEntry = await saveMutation.mutateAsync(payload);
+      }
+      if (import.meta.env.DEV) {
+        console.info("[worklog-page] save:success", {
+          worklogId: savedEntry.id,
+          status: savedEntry.status,
+          workDate: savedEntry.workDate,
+        });
       }
       setEditingLogId(savedEntry.id);
 

@@ -2,13 +2,14 @@
  * Supabase-backed worklog hooks with React Query + Realtime
  * Falls back to localStorage in test mode (no auth)
  */
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { normalizeAppRole } from "@/lib/roles";
+import { dedupeWorkerNames, normalizeWorkerIdentity } from "@/lib/worklogWorker";
 import {
   deleteWorklog as localDeleteWorklog,
   getAllWorklogs,
@@ -39,6 +40,9 @@ type WorklogManpowerRow = Database["public"]["Tables"]["worklog_manpower"]["Row"
 type WorklogWorksetRow = Database["public"]["Tables"]["worklog_worksets"]["Row"];
 type WorklogMaterialRow = Database["public"]["Tables"]["worklog_materials"]["Row"];
 type WorklogDocumentRow = Pick<Database["public"]["Tables"]["documents"]["Row"], "worklog_id" | "doc_type">;
+type WorklogIdentityManpowerRow = Pick<WorklogManpowerRow, "worklog_id" | "worker_name">;
+type AdminDirectoryIdentityRow = Pick<Database["public"]["Tables"]["admin_user_directory"]["Row"], "name">;
+type ProfileIdentityRow = Pick<Database["public"]["Tables"]["profiles"]["Row"], "name">;
 
 type WorklogQueryRow = WorklogRow & {
   worklog_manpower?: WorklogManpowerRow[] | null;
@@ -65,6 +69,11 @@ export type WorklogMutationInput = {
   status: WorklogStatus;
   version?: number;
   weather?: string;
+};
+
+export type UseWorklogsOptions = {
+  mode?: "default" | "worker-output";
+  workerNames?: string[];
 };
 
 function normalizeWorklogStatus(rawStatus: unknown): WorklogStatus {
@@ -481,13 +490,70 @@ async function getWorklogAccessTarget(worklogId: string, userId: string) {
   return { currentStatus, isOwner, privileged };
 }
 
-export function useWorklogs() {
+async function fetchWorkerIdentityNames(
+  userId: string,
+  options: {
+    metadataName?: string;
+    email?: string;
+    workerNames?: string[];
+  },
+) {
+  const emailName = String(options.email || "").trim().split("@")[0]?.trim() || "";
+  const seeded = dedupeWorkerNames([options.metadataName, emailName, ...(options.workerNames || [])]);
+  const names = new Set(seeded);
+
+  const [directoryResult, profileResult] = await Promise.all([
+    supabase
+      .from("admin_user_directory")
+      .select("name")
+      .eq("linked_user_id", userId)
+      .eq("is_active", true),
+    supabase
+      .from("profiles")
+      .select("name")
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+
+  const directoryRows = (directoryResult.data || []) as AdminDirectoryIdentityRow[];
+  directoryRows.forEach((row) => {
+    const nextName = String(row.name || "").trim();
+    if (nextName) names.add(nextName);
+  });
+
+  const profileRow = profileResult.data as ProfileIdentityRow | null;
+  const profileName = String(profileRow?.name || "").trim();
+  if (profileName) names.add(profileName);
+
+  return [...names];
+}
+
+function createWorklogsBaseQuery() {
+  return supabase
+    .from("worklogs")
+    .select(
+      `
+      *,
+      worklog_manpower(*),
+      worklog_worksets(*),
+      worklog_materials(*)
+    `,
+    )
+    .order("work_date", { ascending: false });
+}
+
+export function useWorklogs(options?: UseWorklogsOptions) {
   const { user, isTestMode } = useAuth();
   const queryClient = useQueryClient();
   const isAuthenticated = !!user;
+  const mode = options?.mode || "default";
+  const workerNameKey = useMemo(
+    () => dedupeWorkerNames(options?.workerNames || []).sort((left, right) => left.localeCompare(right, "ko")),
+    [options?.workerNames],
+  );
 
   const query = useQuery({
-    queryKey: ["worklogs", user?.id ?? "anon"],
+    queryKey: ["worklogs", user?.id ?? "anon", mode, workerNameKey],
     queryFn: async (): Promise<WorklogEntry[]> => {
       if (!isAuthenticated) {
         migrateOldWorklogs();
@@ -495,27 +561,75 @@ export function useWorklogs() {
       }
 
       const canViewAll = await hasPrivilegedWorklogAccess(user.id);
-      let query = supabase
-        .from("worklogs")
-        .select(
-          `
-          *,
-          worklog_manpower(*),
-          worklog_worksets(*),
-          worklog_materials(*)
-        `,
-        )
-        .order("work_date", { ascending: false });
+      let rows: WorklogQueryRow[] = [];
 
-      if (!canViewAll) {
-        query = query.eq("created_by", user.id);
+      if (canViewAll) {
+        const { data, error } = await createWorklogsBaseQuery();
+        if (error) throw error;
+        rows = (data || []) as WorklogQueryRow[];
+      } else if (mode !== "worker-output") {
+        const { data, error } = await createWorklogsBaseQuery().eq("created_by", user.id);
+        if (error) throw error;
+        rows = (data || []) as WorklogQueryRow[];
+      } else {
+        const workerIdentityNames = await fetchWorkerIdentityNames(user.id, {
+          metadataName: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : "",
+          email: typeof user.email === "string" ? user.email : "",
+          workerNames: workerNameKey,
+        });
+        const normalizedWorkerNames = new Set(
+          workerIdentityNames.map((name) => normalizeWorkerIdentity(name)).filter(Boolean),
+        );
+
+        let matchedIds: string[] = [];
+        if (normalizedWorkerNames.size > 0) {
+          const { data: manpowerRows, error: manpowerError } = await supabase
+            .from("worklog_manpower")
+            .select("worklog_id, worker_name");
+
+          if (manpowerError) throw manpowerError;
+
+          matchedIds = [
+            ...new Set(
+              ((manpowerRows || []) as WorklogIdentityManpowerRow[])
+                .filter((row) => normalizedWorkerNames.has(normalizeWorkerIdentity(row.worker_name)))
+                .map((row) => String(row.worklog_id || "").trim())
+                .filter(Boolean),
+            ),
+          ];
+        }
+
+        const [authoredResult, matchedResult] = await Promise.all([
+          createWorklogsBaseQuery().eq("created_by", user.id),
+          matchedIds.length > 0
+            ? createWorklogsBaseQuery().in("id", matchedIds)
+            : Promise.resolve({ data: [], error: null }),
+        ]);
+
+        if (authoredResult.error) throw authoredResult.error;
+        if (matchedResult.error) throw matchedResult.error;
+
+        const mergedRows = new Map<string, WorklogQueryRow>();
+        ([...(authoredResult.data || []), ...(matchedResult.data || [])] as WorklogQueryRow[]).forEach((row) => {
+          mergedRows.set(row.id, row);
+        });
+
+        rows = [...mergedRows.values()].sort(
+          (left, right) =>
+            String(right.work_date || "").localeCompare(String(left.work_date || "")) ||
+            String(right.created_at || "").localeCompare(String(left.created_at || "")),
+        );
+
+        if (import.meta.env.DEV) {
+          console.info("[worklogs] worker-output", {
+            userId: user.id,
+            workerIdentityNames,
+            matchedIdCount: matchedIds.length,
+            resultCount: rows.length,
+          });
+        }
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      const rows = (data || []) as WorklogQueryRow[];
       const worklogIds = rows.map((row) => row.id).filter(Boolean);
       const mediaCountByWorklog: Record<string, { photoCount: number; drawingCount: number }> = {};
       const attachmentMap = readAttachmentMap();
@@ -536,6 +650,14 @@ export function useWorklogs() {
         });
       }
 
+      if (import.meta.env.DEV) {
+        console.info("[worklogs] fetched", {
+          mode,
+          canViewAll,
+          count: rows.length,
+        });
+      }
+
       return rows.map((row) => mapToWorklogEntry(row, mediaCountByWorklog[row.id], attachmentMap[row.id]));
     },
     enabled: isAuthenticated || isTestMode,
@@ -547,6 +669,15 @@ export function useWorklogs() {
     const channel = supabase
       .channel("worklogs-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "worklogs" }, () =>
+        queryClient.invalidateQueries({ queryKey: ["worklogs"] }),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "worklog_manpower" }, () =>
+        queryClient.invalidateQueries({ queryKey: ["worklogs"] }),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "worklog_worksets" }, () =>
+        queryClient.invalidateQueries({ queryKey: ["worklogs"] }),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "worklog_materials" }, () =>
         queryClient.invalidateQueries({ queryKey: ["worklogs"] }),
       )
       .subscribe();
