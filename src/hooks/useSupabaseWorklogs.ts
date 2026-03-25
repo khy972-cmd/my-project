@@ -3,7 +3,7 @@
  * Falls back to localStorage in test mode (no auth)
  */
 import { useEffect, useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -542,6 +542,17 @@ function createWorklogsBaseQuery() {
     .order("work_date", { ascending: false });
 }
 
+async function invalidateWorklogQueries(queryClient: QueryClient, action: string) {
+  try {
+    await queryClient.invalidateQueries({ queryKey: ["worklogs"] });
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error(`[worklogs] ${action}:invalidate:error`, error);
+    }
+    toast.error("저장 후 일지 목록을 새로고침하지 못했습니다. 화면을 다시 열어 주세요.");
+  }
+}
+
 export function useWorklogs(options?: UseWorklogsOptions) {
   const { user, isTestMode } = useAuth();
   const queryClient = useQueryClient();
@@ -757,7 +768,17 @@ export function useSaveWorklog() {
 
         if (updateError) throw updateError;
 
-        await replaceWorklogDetails(existing.id, entry);
+        try {
+          await replaceWorklogDetails(existing.id, entry);
+        } catch (error) {
+          if (import.meta.env.DEV) {
+            console.error("[worklogs] update:details:error", {
+              worklogId: existing.id,
+              error,
+            });
+          }
+          throw error;
+        }
 
         const prevMeta = getAttachmentMeta(existing.id);
         const nextMeta = {
@@ -789,7 +810,18 @@ export function useSaveWorklog() {
         .single();
 
       if (insertError) throw insertError;
-      await insertWorklogDetails(insertedWorklog.id, entry);
+      try {
+        await insertWorklogDetails(insertedWorklog.id, entry);
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error("[worklogs] insert:details:error", {
+            worklogId: insertedWorklog.id,
+            error,
+          });
+        }
+        await supabase.from("worklogs").delete().eq("id", insertedWorklog.id);
+        throw error;
+      }
       setAttachmentMeta(insertedWorklog.id, fallbackMeta.photos, fallbackMeta.drawings);
 
       return mapToWorklogEntry(
@@ -798,8 +830,8 @@ export function useSaveWorklog() {
         fallbackMeta,
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["worklogs"] });
+    onSuccess: async () => {
+      await invalidateWorklogQueries(queryClient, "save");
     },
   });
 }
@@ -874,8 +906,8 @@ export function useUpdateWorklog() {
         nextMeta,
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["worklogs"] });
+    onSuccess: async () => {
+      await invalidateWorklogQueries(queryClient, "update");
     },
   });
 }
@@ -906,8 +938,8 @@ export function useUpdateWorklogStatus() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["worklogs"] });
+    onSuccess: async () => {
+      await invalidateWorklogQueries(queryClient, "status");
     },
   });
 }
@@ -937,8 +969,8 @@ export function useDeleteWorklog() {
       if (error) throw error;
       await removeAttachmentMeta(id);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["worklogs"] });
+    onSuccess: async () => {
+      await invalidateWorklogQueries(queryClient, "delete");
     },
   });
 }

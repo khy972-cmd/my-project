@@ -74,8 +74,9 @@ import {
   type SiteWorklogDraft,
   type SiteWorklogSnapshotRow,
 } from "@/lib/siteWorklogDraftStore";
-import { HOME_DRAFT_KEY, MEMO_AUTOSAVE_KEY } from "@/constants/storageKeys";
+import { MEMO_AUTOSAVE_KEY } from "@/constants/storageKeys";
 import { getTodayYYYYMMDD } from "@/lib/dateFormat";
+import { parseHomeDraftFromStorage } from "@/lib/homeDraftBridge";
 import { getLegacyMediaUrl } from "@/lib/legacyMedia";
 
 const MEMBER_CHIPS = ["슬라브", "거더", "기둥", "기타"];
@@ -137,18 +138,6 @@ interface WorklogFormState {
   photos: LegacyMedia[];
   drawings: LegacyMedia[];
   status: WorklogStatus;
-}
-
-interface HomeDraftState {
-  selectedSite?: unknown;
-  siteSearch?: unknown;
-  dept?: unknown;
-  workDate?: unknown;
-  manpowerList?: unknown;
-  workSets?: unknown;
-  materials?: unknown;
-  photos?: unknown;
-  drawings?: unknown;
 }
 
 interface SiteDailyRow {
@@ -407,127 +396,32 @@ function drawingStatusLabel(status: string) {
   return normalizeDrawingStatus(status) === "done" ? "완료도면" : "진행도면";
 }
 function parseHomeDraft(today: string): WorklogFormState | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(HOME_DRAFT_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw) as HomeDraftState;
-    if (!parsed || typeof parsed !== "object") return null;
-
-    const nowIso = new Date().toISOString();
-    const base = createDefaultForm(today);
-
-    const manpower: ManpowerItem[] = Array.isArray(parsed.manpowerList)
-      ? parsed.manpowerList
-          .map((item) => {
-            if (!item || typeof item !== "object") return null;
-            const row = item as Record<string, unknown>;
-            return {
-              id: makeRowId(),
-              worker: asString(row.worker),
-              workHours: asNumber(row.workHours, 1),
-              isCustom: !!row.isCustom,
-              locked: !!row.locked,
-            } as ManpowerItem;
-          })
-          .filter(Boolean) as ManpowerItem[]
-      : [];
-
-    const workSets: WorkSet[] = Array.isArray(parsed.workSets)
-      ? parsed.workSets
-          .map((item) => {
-            if (!item || typeof item !== "object") return null;
-            const row = item as Record<string, unknown>;
-            const location =
-              row.location && typeof row.location === "object" ? (row.location as Record<string, unknown>) : {};
-            return {
-              id: makeRowId(),
-              member: asString(row.member),
-              process: asString(row.process),
-              type: asString(row.type),
-              location: {
-                block: asString(location.block),
-                dong: asString(location.dong),
-                floor: asString(location.floor),
-              },
-              customMemberValue: asString(row.customMemberValue),
-              customProcessValue: asString(row.customProcessValue),
-              customTypeValue: asString(row.customTypeValue),
-            } as WorkSet;
-          })
-          .filter(Boolean) as WorkSet[]
-      : [];
-
-    const materials: MaterialItem[] = Array.isArray(parsed.materials)
-      ? parsed.materials
-          .map((item) => {
-            if (!item || typeof item !== "object") return null;
-            const row = item as Record<string, unknown>;
-            const name = asString(row.name).trim();
-            if (!name) return null;
-            return {
-              id: makeRowId(),
-              name,
-              qty: Math.max(0, asNumber(row.qty, 0)),
-            } as MaterialItem;
-          })
-          .filter(Boolean) as MaterialItem[]
-      : [];
-
-    const photos: LegacyMedia[] = Array.isArray(parsed.photos)
-      ? parsed.photos
-          .map((item, index) => {
-            if (!item || typeof item !== "object") return null;
-            const row = item as Record<string, unknown>;
-            const img = asString(row?.img || row?.url).trim();
-            if (!img) return null;
-            const statusRaw = asString(row.status || row.desc || row.badge, "after");
-            return {
-              id: `home_photo_${Date.now()}_${index}`,
-              type: "photo",
-              status: normalizePhotoStatus(statusRaw),
-              timestamp: nowIso,
-              url: img,
-            } as LegacyMedia;
-          })
-          .filter(Boolean) as LegacyMedia[]
-      : [];
-
-    const drawings: LegacyMedia[] = Array.isArray(parsed.drawings)
-      ? parsed.drawings
-          .map((item, index) => {
-            const row = item && typeof item === "object" ? (item as Record<string, unknown>) : null;
-            const url = asString(row?.img || row?.url || item).trim();
-            if (!url) return null;
-            const statusRaw = asString(row?.status || row?.desc || row?.stage, "progress");
-            return {
-              id: `home_drawing_${Date.now()}_${index}`,
-              type: "drawing",
-              status: normalizeDrawingStatus(statusRaw),
-              timestamp: nowIso,
-              url,
-            } as LegacyMedia;
-          })
-          .filter(Boolean) as LegacyMedia[]
-      : [];
-
-    return {
-      ...base,
-      siteValue: asString(parsed.selectedSite),
-      siteName: asString(parsed.siteSearch),
-      dept: asString(parsed.dept),
-      workDate: asString(parsed.workDate, today),
-      manpower: manpower.length > 0 ? manpower : base.manpower,
-      workSets: workSets.length > 0 ? workSets : base.workSets,
-      materials,
-      photos,
-      drawings,
-      status: "draft",
-    };
-  } catch {
+  const parsed = parseHomeDraftFromStorage(today);
+  if (!parsed.ok) {
+    if (parsed.code !== "empty-draft" && import.meta.env.DEV) {
+      console.error("[worklog-home-draft] parse:error", {
+        code: parsed.code,
+        message: parsed.devMessage,
+      });
+    }
     return null;
   }
+
+  const base = createDefaultForm(today);
+
+  return {
+    ...base,
+    siteValue: parsed.value.selectedSite,
+    siteName: parsed.value.siteSearch,
+    dept: parsed.value.dept,
+    workDate: parsed.value.workDate || today,
+    manpower: parsed.value.manpowerList.length > 0 ? parsed.value.manpowerList : base.manpower,
+    workSets: parsed.value.workSets.length > 0 ? parsed.value.workSets : base.workSets,
+    materials: parsed.value.materials.map(({ receiptFile: _receiptFile, ...item }) => item),
+    photos: cloneMediaRows(parsed.value.photos as LegacyMedia[], "photo"),
+    drawings: cloneMediaRows(parsed.value.drawings as LegacyMedia[], "drawing"),
+    status: "draft",
+  };
 }
 
 function toFormState(log: WorklogEntry): WorklogFormState {
